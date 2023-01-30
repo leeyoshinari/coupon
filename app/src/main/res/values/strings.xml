@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">优惠券</string>
+    <string name="action_settings">Settings</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">淘宝</string>
+    <string name="second_fragment_label"><s>商品详情</s></string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+    <string name="input_hint_text">请输入搜索内容</string>
+    <string name="search_button_text">搜索</string>
+    <string name="tb_text">淘 宝</string>
+    <string name="jd_text">京 东</string>
+    <string name="pdd_text">拼多多</string>
+    <string name="wm_text">外 卖</string>
+    <string name="price_unit">￥</string>
+<!--    <String name="good_detail_des">商品</String>-->
+</resources>
