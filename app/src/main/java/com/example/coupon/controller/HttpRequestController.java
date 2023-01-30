@@ -25,8 +25,6 @@ public class HttpRequestController {
     private static String TB_APP_SECRET = "ad114d7bdaef1534e3d4b10837b1066b";       // 应用AppSecret
     private static String TB_APP_KEY = "32482043";      // 应用app_key
     private static String TB_PID_LAST = "111189250370";     // 推广位PID最后一位
-
-    private static String JD_SEARCH_URL = "https://api-gw.haojingke.com/index.php/v1/api/jd/goodslist";  // 京东第三方 URL
     private static String JD_URL = "https://router.jd.com/api";     // 京东官方 url
     private static String JD_APP_KEY = "3496742e2d5a2fde480d356ec922da1e";
     private static String JD_APP_SECRET = "3046bbee1ede4d3583943cbd33c73bf4";
@@ -68,7 +66,7 @@ public class HttpRequestController {
                 params.put("sign", encryptParams(params, TB_APP_SECRET));
             }
             if (getPlatform().equals("jd")) {
-                queryGoodsListForJd(searchKey, pageNo);
+                return queryGoodsListForJd(searchKey, pageNo);
             }
             if (getPlatform().equals("pdd")) {
                 params.put("client_id", PDD_CLIENT_ID);
@@ -95,7 +93,7 @@ public class HttpRequestController {
                 params.put("app_key", JD_APP_KEY);
                 params.put("method", "jd.union.open.goods.bigfield.query");
                 params.put("format", "JSON");
-                params.put("timestamp", dateFormat.format(new Date(System.currentTimeMillis() + 28800000)));
+                params.put("timestamp", dateFormat.format(new Date()));
                 params.put("v", "1.0");
                 params.put("sign_method", "md5");
                 params.put("param_json", "{\"goodsReq\": {\"skuIds\": [\"" + hashMap.get("sku_id") + "\"]}}");
@@ -116,6 +114,35 @@ public class HttpRequestController {
             e.printStackTrace();
         }
         return getUrlByPlatform(params);
+    }
+
+    public JSONObject generatePromotion(JSONObject queryParam, boolean isApp) {
+        JSONObject params = new JSONObject();
+        try {
+            if (getPlatform().equals("jd")) {
+                return httpRequestGet(queryGeneratePromotionForJd(queryParam.getString("goods_id")));
+            }
+            if (getPlatform().equals("pdd")) {
+                params.put("client_id", PDD_CLIENT_ID);
+                params.put("p_id", PDD_PID);
+                params.put("data_type", "JSON");
+                params.put("timestamp", Long.valueOf(System.currentTimeMillis() / 1000));
+                params.put("type", "pdd.ddk.goods.promotion.url.generate");
+                params.put("goods_sign_list", "[\"" + queryParam.getString("goods_sign") + "\"]");
+                params.put("search_id", queryParam.getString("search_id"));
+                params.put("custom_parameters", PDD_custom_parameters);
+                if (isApp) {
+                    params.put("generate_schema_url", true);
+                } else {
+                    params.put("generate_we_app", true);
+                }
+                params.put("sign", encryptParams(params, PDD_SECRET));
+                return httpRequestGet(getUrlByPlatform(params));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return params;
     }
 
     public String convertJsonToUrlParams(JSONObject params) {
@@ -288,7 +315,23 @@ public class HttpRequestController {
             params.put("ispg", 0);
             params.put("iscoupon", 0);
             params.put("isunion", "1");
-            urlPath = JD_SEARCH_URL + "?" + convertJsonToUrlParams(params);
+            urlPath = "https://api-gw.haojingke.com/index.php/v1/api/jd/goodslist?" + convertJsonToUrlParams(params);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return urlPath;
+    }
+
+    public String queryGeneratePromotionForJd(String skuId) {
+        String urlPath = null;
+        try {
+            JSONObject params = new JSONObject();
+            params.put("apikey", "25ee321ae0f7f9be");
+            params.put("unionId", "1002712393");
+            params.put("type", 1);
+            params.put("positionid", "3003427429");
+            params.put("goods_id", skuId);
+            urlPath = "https://api-gw.haojingke.com/index.php/v1/api/jd/getunionurl?" + convertJsonToUrlParams(params);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -318,14 +361,14 @@ public class HttpRequestController {
                     volumeText = (int) volume / 1000 + "千";
                 }
                 if (goodsList.getJSONObject(i).has("coupon_amount") && goodsList.getJSONObject(i).getDouble("coupon_amount") > 0) {
-                    hashMap.put("coupon_url", "taobao:" + goodsList.getJSONObject(i).getString("coupon_share_url").replace("https:", "").replace("http:", ""));
+                    hashMap.put("coupon_url", goodsList.getJSONObject(i).getString("coupon_share_url"));
                     hashMap.put("coupon_price", goodsList.getJSONObject(i).getString("coupon_amount"));
                     hashMap.put("coupon_text", "元优惠券   " + volumeText + "人已购买");
                     hashMap.put("sale_price", goodsList.getJSONObject(i).getString("zk_final_price"));
                     hashMap.put("final_price_text", " 券后 ￥");
                     hashMap.put("final_price", String.format("%.2f", goodsList.getJSONObject(i).getDouble("zk_final_price") - goodsList.getJSONObject(i).getDouble("coupon_amount")));
                 } else {
-                    hashMap.put("item_url", "taobao:" + goodsList.getJSONObject(i).getString("url").replace("https:", "").replace("http:", ""));
+                    hashMap.put("item_url", goodsList.getJSONObject(i).getString("url"));
                     hashMap.put("coupon_price", "");
                     hashMap.put("coupon_text", volumeText + "人已购买");
                     hashMap.put("sale_price", "");
@@ -349,7 +392,7 @@ public class HttpRequestController {
             HashMap<String, Object> hashMap = new HashMap<>();
             for (int i = 0; i < goodsList.length(); i++) {
                 hashMap = new HashMap<>();
-                hashMap.put("sku_id", goodsList.getJSONObject(i).getString("skuId"));
+                hashMap.put("skuId", goodsList.getJSONObject(i).getString("skuId"));
                 hashMap.put("img", ""); //goodsList.getJSONObject(i).getJSONObject("imageInfo").getJSONArray("imageList").getJSONObject(0).getDouble("url")
                 hashMap.put("title", goodsList.getJSONObject(i).getString("skuName"));
                 hashMap.put("shop", goodsList.getJSONObject(i).getJSONObject("shopInfo").getString("shopName"));
@@ -368,10 +411,10 @@ public class HttpRequestController {
                     hashMap.put("final_price_text", " 券后 ￥");
                     hashMap.put("final_price", String.format("%.2f", (goodsList.getJSONObject(i).getJSONObject("priceInfo").getDouble("price") - goodsList.getJSONObject(i).getJSONObject("couponInfo").getJSONArray("couponList").getJSONObject(0).getDouble("discount"))));
                 } else {
-                    hashMap.put("coupon_price", null);
+                    hashMap.put("coupon_price", "");
                     hashMap.put("coupon_text", volumeText + "人已购买");
-                    hashMap.put("sale_price", null);
-                    hashMap.put("final_price_text", null);
+                    hashMap.put("sale_price", "");
+                    hashMap.put("final_price_text", "");
                     hashMap.put("final_price", String.format("%.2f", goodsList.getJSONObject(i).getJSONObject("priceInfo").getDouble("price")));
                 }
                 arrayList.add(hashMap);
@@ -403,10 +446,10 @@ public class HttpRequestController {
                     hashMap.put("final_price_text", " 券后 ￥");
                     hashMap.put("final_price", String.format("%.2f", (goodsList.getJSONObject(i).getDouble("min_group_price") - goodsList.getJSONObject(i).getDouble("coupon_discount")) / 100));
                 } else {
-                    hashMap.put("coupon_price", null);
+                    hashMap.put("coupon_price", "");
                     hashMap.put("coupon_text", goodsList.getJSONObject(i).getString("sales_tip") + "人已购买");
-                    hashMap.put("sale_price", null);
-                    hashMap.put("final_price_text", null);
+                    hashMap.put("sale_price", "");
+                    hashMap.put("final_price_text", "");
                     hashMap.put("final_price", String.format("%.2f", goodsList.getJSONObject(i).getDouble("min_group_price") / 100));
                 }
                 arrayList.add(hashMap);
@@ -437,20 +480,7 @@ public class HttpRequestController {
         try {
             goodObj.getJSONObject("jd_union_open_goods_bigfield_query_response").getString("result");
             JSONObject detail = new JSONObject(goodObj.getJSONObject("jd_union_open_goods_bigfield_query_response").getString("result")).getJSONArray("data").getJSONObject(0);
-            goodDetail.put("title_img", detail.getJSONObject("imageInfo").getJSONArray("imageList"));
-            goodDetail.put("goods_name", detail.getString("skuName"));
-            goodDetail.put("shop", detail.getString("brandName"));
-            goodDetail.put("comment_desc", null);
-            goodDetail.put("comment_serv", null);
-            goodDetail.put("comment_lgst", null);
             goodDetail.put("detail_desc", detail.getString("detailImages").split(","));
-            if (detail.getDouble("coupon_discount") > 0) {
-                goodDetail.put("coupon_price", String.format("%.2f", detail.getDouble("coupon_discount") / 100));
-                goodDetail.put("final_price", String.format("%.2f", (detail.getDouble("min_group_price") - detail.getDouble("coupon_discount")) / 100));
-            } else {
-                goodDetail.put("coupon_price", null);
-                goodDetail.put("final_price", String.format("%.2f", detail.getDouble("min_group_price") / 100));
-            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -464,18 +494,6 @@ public class HttpRequestController {
             goodObj.getJSONObject("goods_detail_response");
             JSONObject detail = goodObj.getJSONObject("goods_detail_response").getJSONArray("goods_details").getJSONObject(0);
             goodDetail.put("title_img", detail.getJSONArray("goods_gallery_urls"));
-            goodDetail.put("goods_name", detail.getString("goods_name"));
-            goodDetail.put("shop", detail.getString("mall_name"));
-            goodDetail.put("comment_desc", detail.getString("desc_txt"));
-            goodDetail.put("comment_serv", detail.getString("serv_txt"));
-            goodDetail.put("comment_lgst", detail.getString("lgst_txt"));
-            if (detail.getDouble("coupon_discount") > 0) {
-                goodDetail.put("coupon_price", String.format("%.2f", detail.getDouble("coupon_discount") / 100));
-                goodDetail.put("final_price", String.format("%.2f", (detail.getDouble("min_group_price") - detail.getDouble("coupon_discount")) / 100));
-            } else {
-                goodDetail.put("coupon_price", null);
-                goodDetail.put("final_price", String.format("%.2f", detail.getDouble("min_group_price") / 100));
-            }
         } catch (Exception e) {
             e.printStackTrace();
         }

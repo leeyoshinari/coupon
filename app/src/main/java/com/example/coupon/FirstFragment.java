@@ -2,11 +2,6 @@ package com.example.coupon;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.Entity;
-import android.content.Intent;
-import android.content.pm.PackageInfo;
-import android.graphics.Paint;
-import android.net.Uri;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
@@ -21,7 +16,6 @@ import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 import com.example.coupon.databinding.FragmentFirstBinding;
 
-import com.example.coupon.controller.logger;
 import com.example.coupon.controller.HttpRequestController;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -69,6 +63,7 @@ public class FirstFragment extends Fragment {
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
         getScreenSizeDp();
         EditText editText = view.findViewById(R.id.key_word);
         ViewGroup.LayoutParams param = editText.getLayoutParams();
@@ -146,8 +141,6 @@ public class FirstFragment extends Fragment {
             @Override
             public void onClick(View view) {
                 httpRequestController.setPlatform(requireContext().getResources().getResourceEntryName(view.getId()));
-//                TextView t = requireView().findViewById(R.id.tb_test);
-//                t.setText(Html.fromHtml("今天<font color=\"#00ff00\">天气不错</font>"));
                 clickButtonColorImg(R.id.wm_text, "wm");
             }
         });
@@ -172,17 +165,9 @@ public class FirstFragment extends Fragment {
         String keyWord = binding.keyWord.getText().toString().trim();
         String url = "";
         if (keyWord.equals("")) {
-            if (httpRequestController.getPlatform().equals("jd")) {
-                url = httpRequestController.queryGoodsListForJd(keyWord, 1);
-            } else {
-                url = httpRequestController.generateUrlPathForList(keyWord, 1);
-            }
+            url = httpRequestController.generateUrlPathForList(keyWord, 1);
         } else {
-            if (httpRequestController.getPlatform().equals("jd")) {
-                url = httpRequestController.queryGoodsListForJd(keyWord, 1);
-            } else {
-                url = httpRequestController.generateUrlPathForList(keyWord, 1);
-            }
+            url = httpRequestController.generateUrlPathForList(keyWord, 1);
         }
         List<HashMap<String, Object>> arrayList = httpRequestController.parseGoodList(url);
         SimpleAdapter simpleAdapter = new SimpleAdapter(this.getContext(), arrayList, R.layout.good_list_layout,
@@ -197,7 +182,6 @@ public class FirstFragment extends Fragment {
                     public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                         HashMap<String, Object> itemHashMap = arrayList.get(i);
                         jumpToGoodDetailPage(itemHashMap);
-//                        jumpToPurchasePage(itemHashMap);
                     }
                 };
                 listView.setOnItemClickListener(onItemClickListener);
@@ -220,74 +204,35 @@ public class FirstFragment extends Fragment {
             public void run() {
                 try {
                     Bundle bundle = new Bundle();
-                    if (httpRequestController.getPlatform().equals("tb")) {
-                        for (Map.Entry<String, Object> entity : hashMap.entrySet()) {
-                            if (entity.getKey().equals("title_img") || entity.getKey().equals("desc_img")) {
-                                ArrayList<String> arrayList = new ArrayList<String>();
-                                JSONArray jsonArray = (JSONArray) entity.getValue();
-                                for (int i = 0; i < jsonArray.length(); i++){
-                                    arrayList.add(jsonArray.getString(i));
-                                }
-                                bundle.putStringArrayList(entity.getKey(), arrayList);
-                            }
-                            else {
-                                bundle.putString(entity.getKey(), entity.getValue().toString());
-                            }
-                        }
-                        NavHostFragment.findNavController(FirstFragment.this).navigate(R.id.action_FirstFragment_to_SecondFragment, bundle);
+                    if (httpRequestController.getPlatform().equals("pdd")) {
+                        String urlPath = httpRequestController.generateUrlPathForDetail(hashMap);
+                        JSONObject goodDetail = httpRequestController.parseGoodDetail(urlPath);
+                        hashMap.put("title_img", goodDetail.getJSONArray("title_img"));
                     }
-                    String urlPath = httpRequestController.generateUrlPathForDetail(hashMap);
-                    JSONObject goodDetail = httpRequestController.parseGoodDetail(urlPath);
-                    JSONArray goodImages = goodDetail.getJSONArray("title_img");
+                    if (httpRequestController.getPlatform().equals("jd")) {
+                        String urlPath = httpRequestController.generateUrlPathForDetail(hashMap);
+                        JSONObject goodDetail = httpRequestController.parseGoodDetail(urlPath);
+                    }
+                    for (Map.Entry<String, Object> entity : hashMap.entrySet()) {
+                        if (entity.getKey().equals("title_img") || entity.getKey().equals("desc_img")) {
+                            ArrayList<String> arrayList = new ArrayList<String>();
+                            JSONArray jsonArray = (JSONArray) entity.getValue();
+                            for (int i = 0; i < jsonArray.length(); i++){
+                                arrayList.add(jsonArray.getString(i));
+                            }
+                            bundle.putStringArrayList(entity.getKey(), arrayList);
+                        }
+                        else {
+                            bundle.putString(entity.getKey(), entity.getValue().toString());
+                        }
+                    }
+                    bundle.putString("platform", httpRequestController.getPlatform());
+                    NavHostFragment.findNavController(FirstFragment.this).navigate(R.id.action_FirstFragment_to_SecondFragment, bundle);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         }).start();
-    }
-
-    public void jumpToPurchasePage(HashMap<String, Object> hashMap) {
-        if (isPkgInstalled()) {
-            String urlPath = "";
-            if (hashMap.containsKey("coupon_url")) {
-                urlPath = Objects.requireNonNull(hashMap.get("coupon_url")).toString();
-            } else {
-                urlPath = Objects.requireNonNull(hashMap.get("item_url")).toString();
-            }
-            Intent intent = new Intent();
-            intent.setAction("android.intent.action.VIEW");
-            intent.setData(Uri.parse(urlPath));
-//            intent.setClassName(getPkgName(), "com.taobao.tao.detail.activity.DetailActivity");
-            startActivity(intent);
-        } else {
-            Toast.makeText(requireContext().getApplicationContext(), "复制淘口令成功，请在手机淘宝打开", Toast.LENGTH_LONG).show();
-        }
-    }
-
-    public Boolean isPkgInstalled() {
-        PackageInfo packageInfo = null;
-        try {
-            packageInfo = requireContext().getPackageManager().getPackageInfo(getPkgName(), 0);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return packageInfo != null;
-    }
-
-    public String getPkgName(){
-        String pkgName = "com.taobao.taobao";
-        switch (httpRequestController.getPlatform()) {
-            case "jd":
-                pkgName = "com.jingdong.app.mall";
-                break;
-            case "pdd":
-                pkgName = "com.xunmeng.pinduoduo";
-                break;
-            case "wm":
-                pkgName = "com.xunmng.pindduo";
-                break;
-        }
-        return pkgName;
     }
 
     public void clickButtonColorImg(int textId, String name) {

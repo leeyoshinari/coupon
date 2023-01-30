@@ -2,7 +2,10 @@ package com.example.coupon;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageInfo;
 import android.graphics.Paint;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
@@ -15,11 +18,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
-import androidx.navigation.fragment.NavHostFragment;
 import com.example.coupon.databinding.FragmentSecondBinding;
+import com.example.coupon.controller.HttpRequestController;
 import org.json.JSONObject;
 
+import java.net.URLEncoder;
 import java.util.HashMap;
+import java.util.Objects;
 
 public class SecondFragment extends Fragment {
 
@@ -40,11 +45,10 @@ public class SecondFragment extends Fragment {
         return heightDp;
     }
 
+    HttpRequestController httpRequestController = new HttpRequestController();
+
     @Override
-    public View onCreateView(
-            LayoutInflater inflater, ViewGroup container,
-            Bundle savedInstanceState
-    ) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         binding = FragmentSecondBinding.inflate(inflater, container, false);
         return binding.getRoot();
 
@@ -52,14 +56,17 @@ public class SecondFragment extends Fragment {
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        assert getArguments() != null;
+        httpRequestController.setPlatform(getArguments().getString("platform"));
         getScreenSizeDp();
         showGoodDetail();
 
         binding.buttonSecond.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                NavHostFragment.findNavController(SecondFragment.this)
-                        .navigate(R.id.action_SecondFragment_to_FirstFragment);
+                jumpToPurchasePage();
+//                NavHostFragment.findNavController(SecondFragment.this)
+//                        .navigate(R.id.action_SecondFragment_to_FirstFragment);
             }
         });
     }
@@ -114,6 +121,115 @@ public class SecondFragment extends Fragment {
         } else {
             Toast.makeText(requireContext().getApplicationContext(), "try again", Toast.LENGTH_LONG).show();
         }
+    }
+
+    public void jumpToPurchasePage() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (isPkgInstalled()) {
+                        JSONObject result = generatePromotionUrl(true);
+                        Intent intent = new Intent();
+                        intent.setAction("android.intent.action.VIEW");
+                        intent.setData(Uri.parse(result.getString("urlPath")));
+                        startActivity(intent);
+                    } else {
+                        JSONObject result = generatePromotionUrl(false);
+                        if (httpRequestController.getPlatform().equals("tb")) {
+                            Intent intent = new Intent();
+                            intent.setAction("android.intent.action.VIEW");
+                            intent.setData(Uri.parse(result.getString("urlPath")));
+                            startActivity(intent);
+                        }
+                        if (httpRequestController.getPlatform().equals("pdd")) {
+                            String appId = result.getString("appId");
+                            String pagePath = result.getString("path");
+                        }
+                        // Toast.makeText(requireContext().getApplicationContext(), "复制淘口令成功，请在手机淘宝打开", Toast.LENGTH_LONG).show();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+    public Boolean isPkgInstalled() {
+        PackageInfo packageInfo = null;
+        try {
+            packageInfo = requireContext().getPackageManager().getPackageInfo(getPkgName(), 0);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return packageInfo != null;
+    }
+
+    public String getPkgName(){
+        String pkgName = "com.taobao.taobao";
+        switch (httpRequestController.getPlatform()) {
+            case "jd":
+                pkgName = "com.jingdong.app.mall";
+                break;
+            case "pdd":
+                pkgName = "com.xunmeng.pinduoduo";
+                break;
+            case "wm":
+                pkgName = "com.xunmng.pindduo";
+                break;
+        }
+        return pkgName;
+    }
+
+    public JSONObject generatePromotionUrl(boolean isApp) {
+        JSONObject result = new JSONObject();
+        JSONObject queryParam = new JSONObject();
+        try {
+            assert getArguments() != null;
+            if (httpRequestController.getPlatform().equals("tb")) {
+                String coupon_url = getArguments().getString("coupon_url");
+                String urlPath = "";
+                if (coupon_url == null || "".equals(coupon_url)) {
+                    urlPath = getArguments().getString("item_url").replace("https:", "").replace("http:", "");
+                } else {
+                    urlPath = coupon_url.replace("https:", "").replace("http:", "");
+                }
+                if (isApp) {
+                    result.put("urlPath", "taobao:" + urlPath);
+                } else {
+                    result.put("urlPath", "https:" + urlPath);
+                }
+            }
+            if (httpRequestController.getPlatform().equals("pdd")) {
+                queryParam.put("search_id", getArguments().getString("search_id"));
+                queryParam.put("goods_sign", getArguments().getString("goods_sign"));
+                JSONObject generateResult = httpRequestController.generatePromotion(queryParam, isApp);
+                generateResult.getJSONObject("goods_promotion_url_generate_response");
+                if (isApp) {
+                    result.put("urlPath", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getString("schema_url"));
+                } else {
+                    result.put("appId", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getJSONObject("we_app_info").getString("app_id"));
+                    result.put("path", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getJSONObject("we_app_info").getString("page_path"));
+                }
+            }
+            if (httpRequestController.getPlatform().equals("jd")) {
+                queryParam.put("goods_id", getArguments().getString("skuId"));
+                JSONObject generateResult = httpRequestController.generatePromotion(queryParam, isApp);
+                if (isApp) {
+                    JSONObject param = new JSONObject();
+                    param.put("des", "productDetail");
+                    param.put("category", "jump");
+                    param.put("url", generateResult.getString("data"));
+                    result.put("urlPath", "openapp.jdmobile://virtual?params=" + URLEncoder.encode(param.toString(), "UTF-8"));
+                } else {
+                    result.put("appId", "wx91d27dbf599dff74");
+                    result.put("path", "pages/union/proxy/proxy?spreadUrl=" + generateResult.getString("data"));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return result;
     }
 
     @Override

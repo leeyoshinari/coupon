@@ -37,6 +37,7 @@
         <package android:name="com.taobao.taobao"/>
         <package android:name="com.jingdong.app.mall"/>
         <package android:name="com.xunmeng.pinduoduo"/>
+        <package android:name="com.tencent.mm"/>
     </queries>
 
 </manifest>
