@@ -2,6 +2,9 @@ package com.example.coupon;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
@@ -13,13 +16,13 @@ import android.widget.*;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.LinearLayoutCompat;
 import androidx.fragment.app.Fragment;
-import androidx.navigation.fragment.NavHostFragment;
 import com.example.coupon.databinding.FragmentFirstBinding;
 
 import com.example.coupon.controller.HttpRequestController;
-import org.json.JSONArray;
+import com.example.coupon.adapter.MyAdapter;
 import org.json.JSONObject;
 
+import java.net.URLEncoder;
 import java.util.*;
 
 
@@ -95,8 +98,6 @@ public class FirstFragment extends Fragment {
         paramMargin.setMarginStart(marginStartSize);
         linearLayout.setLayoutParams(paramMargin);
 
-        int maxMemorySize = (int) (Runtime.getRuntime().maxMemory());
-
         binding.searchButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -170,18 +171,19 @@ public class FirstFragment extends Fragment {
             url = httpRequestController.generateUrlPathForList(keyWord, 1);
         }
         List<HashMap<String, Object>> arrayList = httpRequestController.parseGoodList(url);
-        SimpleAdapter simpleAdapter = new SimpleAdapter(this.getContext(), arrayList, R.layout.good_list_layout,
-                new String[]{"img", "title", "coupon_price", "coupon_text", "sale_price", "final_price_text", "final_price", "shop"}, new int[]{R.id.img, R.id.title, R.id.coupon_price, R.id.coupon_text, R.id.sale_price, R.id.final_price_text, R.id.final_price, R.id.shop});
+        MyAdapter myAdapter = new MyAdapter(this.getContext(), arrayList);
+//        SimpleAdapter simpleAdapter = new SimpleAdapter(this.getContext(), arrayList, R.layout.good_list_layout,
+//                new String[]{"img", "title", "coupon_price", "coupon_text", "sale_price", "final_price_text", "final_price", "shop"}, new int[]{R.id.img, R.id.title, R.id.coupon_price, R.id.coupon_text, R.id.sale_price, R.id.final_price_text, R.id.final_price, R.id.shop});
         ListView listView = requireView().findViewById(R.id.good_list_view);
         listView.post(new Runnable() {
             @Override
             public void run() {
-                listView.setAdapter(simpleAdapter);
+                listView.setAdapter(myAdapter);
                 AdapterView.OnItemClickListener onItemClickListener = new AdapterView.OnItemClickListener() {
                     @Override
                     public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                         HashMap<String, Object> itemHashMap = arrayList.get(i);
-                        jumpToGoodDetailPage(itemHashMap);
+                        jumpToPurchasePage(itemHashMap);
                     }
                 };
                 listView.setOnItemClickListener(onItemClickListener);
@@ -198,41 +200,146 @@ public class FirstFragment extends Fragment {
         setDensity(dm.density);
     }
 
-    public void jumpToGoodDetailPage(HashMap<String, Object> hashMap) {
+//    public void jumpToGoodDetailPage(HashMap<String, Object> hashMap) {
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                try {
+//                    Bundle bundle = new Bundle();
+//                    if (httpRequestController.getPlatform().equals("pdd")) {
+//                        String urlPath = httpRequestController.generateUrlPathForDetail(hashMap);
+//                        JSONObject goodDetail = httpRequestController.parseGoodDetail(urlPath);
+//                        hashMap.put("title_img", goodDetail.getJSONArray("title_img"));
+//                    }
+//                    if (httpRequestController.getPlatform().equals("jd")) {
+//                        String urlPath = httpRequestController.generateUrlPathForDetail(hashMap);
+//                        JSONObject goodDetail = httpRequestController.parseGoodDetail(urlPath);
+//                    }
+//                    for (Map.Entry<String, Object> entity : hashMap.entrySet()) {
+//                        if (entity.getKey().equals("title_img") || entity.getKey().equals("desc_img")) {
+//                            ArrayList<String> arrayList = new ArrayList<String>();
+//                            JSONArray jsonArray = (JSONArray) entity.getValue();
+//                            for (int i = 0; i < jsonArray.length(); i++){
+//                                arrayList.add(jsonArray.getString(i));
+//                            }
+//                            bundle.putStringArrayList(entity.getKey(), arrayList);
+//                        }
+//                        else {
+//                            bundle.putString(entity.getKey(), entity.getValue().toString());
+//                        }
+//                    }
+//                    bundle.putString("platform", httpRequestController.getPlatform());
+//                    NavHostFragment.findNavController(FirstFragment.this).navigate(R.id.action_FirstFragment_to_SecondFragment, bundle);
+//                } catch (Exception e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        }).start();
+//    }
+
+    public void jumpToPurchasePage(HashMap<String, Object> hashMap) {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Bundle bundle = new Bundle();
-                    if (httpRequestController.getPlatform().equals("pdd")) {
-                        String urlPath = httpRequestController.generateUrlPathForDetail(hashMap);
-                        JSONObject goodDetail = httpRequestController.parseGoodDetail(urlPath);
-                        hashMap.put("title_img", goodDetail.getJSONArray("title_img"));
-                    }
-                    if (httpRequestController.getPlatform().equals("jd")) {
-                        String urlPath = httpRequestController.generateUrlPathForDetail(hashMap);
-                        JSONObject goodDetail = httpRequestController.parseGoodDetail(urlPath);
-                    }
-                    for (Map.Entry<String, Object> entity : hashMap.entrySet()) {
-                        if (entity.getKey().equals("title_img") || entity.getKey().equals("desc_img")) {
-                            ArrayList<String> arrayList = new ArrayList<String>();
-                            JSONArray jsonArray = (JSONArray) entity.getValue();
-                            for (int i = 0; i < jsonArray.length(); i++){
-                                arrayList.add(jsonArray.getString(i));
-                            }
-                            bundle.putStringArrayList(entity.getKey(), arrayList);
+                    if (isPkgInstalled()) {
+                        JSONObject result = generatePromotionUrl(hashMap,true);
+                        Intent intent = new Intent();
+                        intent.setAction("android.intent.action.VIEW");
+                        intent.setData(Uri.parse(result.getString("urlPath")));
+                        startActivity(intent);
+                    } else {
+                        JSONObject result = generatePromotionUrl(hashMap, false);
+                        if (httpRequestController.getPlatform().equals("tb")) {
+                            Intent intent = new Intent();
+                            intent.setAction("android.intent.action.VIEW");
+                            intent.setData(Uri.parse(result.getString("urlPath")));
+                            startActivity(intent);
                         }
-                        else {
-                            bundle.putString(entity.getKey(), entity.getValue().toString());
+                        if (httpRequestController.getPlatform().equals("pdd")) {
+                            String appId = result.getString("appId");
+                            String pagePath = result.getString("path");
                         }
+                        // Toast.makeText(requireContext().getApplicationContext(), "复制淘口令成功，请在手机淘宝打开", Toast.LENGTH_LONG).show();
                     }
-                    bundle.putString("platform", httpRequestController.getPlatform());
-                    NavHostFragment.findNavController(FirstFragment.this).navigate(R.id.action_FirstFragment_to_SecondFragment, bundle);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         }).start();
+    }
+
+    public Boolean isPkgInstalled() {
+        PackageInfo packageInfo = null;
+        try {
+            packageInfo = requireContext().getPackageManager().getPackageInfo(getPkgName(), 0);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return packageInfo != null;
+    }
+
+    public String getPkgName(){
+        String pkgName = "com.taobao.taobao";
+        switch (httpRequestController.getPlatform()) {
+            case "jd":
+                pkgName = "com.jingdong.app.mall";
+                break;
+            case "pdd":
+                pkgName = "com.xunmeng.pinduoduo";
+                break;
+            case "wm":
+                pkgName = "com.xunmng.pindduo";
+                break;
+        }
+        return pkgName;
+    }
+
+    public JSONObject generatePromotionUrl(HashMap<String, Object> hashMap, boolean isApp) {
+        JSONObject result = new JSONObject();
+        JSONObject queryParam = new JSONObject();
+        try {
+            if (httpRequestController.getPlatform().equals("tb")) {
+                String coupon_url = (String) hashMap.get("coupon_url");
+                String urlPath = "";
+                if (coupon_url == null || "".equals(coupon_url)) {
+                    urlPath = Objects.requireNonNull(hashMap.get("item_url")).toString().replace("https:", "").replace("http:", "");
+                } else {
+                    urlPath = coupon_url.replace("https:", "").replace("http:", "");
+                }
+                if (isApp) {
+                    result.put("urlPath", "taobao:" + urlPath);
+                } else {
+                    result.put("urlPath", "https:" + urlPath);
+                }
+            }
+            if (httpRequestController.getPlatform().equals("pdd")) {
+                queryParam.put("search_id", hashMap.get("search_id"));
+                queryParam.put("goods_sign", hashMap.get("goods_sign"));
+                JSONObject generateResult = httpRequestController.generatePromotion(queryParam, isApp);
+                generateResult.getJSONObject("goods_promotion_url_generate_response");
+                if (isApp) {
+                    result.put("urlPath", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getString("schema_url"));
+                } else {
+                    result.put("appId", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getJSONObject("we_app_info").getString("app_id"));
+                    result.put("path", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getJSONObject("we_app_info").getString("page_path"));
+                }
+            }
+            if (httpRequestController.getPlatform().equals("jd")) {
+                queryParam.put("goods_id", hashMap.get("skuId"));
+                JSONObject generateResult = httpRequestController.generatePromotion(queryParam, isApp);
+                if (isApp) {
+                    String path = "{\"category\":\"jump\",\"des\":\"m\",\"url\":\"" + generateResult.getString("data") + "\"}";
+                    result.put("urlPath", "openapp.jdmobile://virtual?params=" + URLEncoder.encode(path, "UTF-8"));
+                } else {
+                    result.put("appId", "wx91d27dbf599dff74");
+                    result.put("path", "pages/union/proxy/proxy?spreadUrl=" + generateResult.getString("data"));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return result;
     }
 
     public void clickButtonColorImg(int textId, String name) {

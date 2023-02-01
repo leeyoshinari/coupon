@@ -348,7 +348,7 @@ public class HttpRequestController {
             HashMap<String, Object> hashMap = new HashMap<>();
             for (int i = 0; i < goodsList.length(); i++) {
                 hashMap = new HashMap<>();
-                hashMap.put("img", ""); // pict_url
+                hashMap.put("img", goodsList.getJSONObject(i).getString("pict_url")); // pict_url
                 hashMap.put("title_img", goodsList.getJSONObject(i).getJSONObject("small_images").getJSONArray("string"));
                 hashMap.put("item_id", goodsList.getJSONObject(i).getString("item_id"));
                 hashMap.put("title", goodsList.getJSONObject(i).getString("title"));
@@ -393,7 +393,7 @@ public class HttpRequestController {
             for (int i = 0; i < goodsList.length(); i++) {
                 hashMap = new HashMap<>();
                 hashMap.put("skuId", goodsList.getJSONObject(i).getString("skuId"));
-                hashMap.put("img", ""); //goodsList.getJSONObject(i).getJSONObject("imageInfo").getJSONArray("imageList").getJSONObject(0).getDouble("url")
+                hashMap.put("img", goodsList.getJSONObject(i).getJSONObject("imageInfo").getJSONArray("imageList").getJSONObject(0).getString("url"));
                 hashMap.put("title", goodsList.getJSONObject(i).getString("skuName"));
                 hashMap.put("shop", goodsList.getJSONObject(i).getJSONObject("shopInfo").getString("shopName"));
                 int volume = goodsList.getJSONObject(i).getInt("inOrderCount30Days");
@@ -434,7 +434,7 @@ public class HttpRequestController {
             HashMap<String, Object> hashMap = new HashMap<>();
             for (int i = 0; i < goodsList.length(); i++) {
                 hashMap = new HashMap<>();
-                hashMap.put("img", ""); //goods_thumbnail_url
+                hashMap.put("img", goodsList.getJSONObject(i).getString("goods_thumbnail_url")); //goods_thumbnail_url
                 hashMap.put("title", goodsList.getJSONObject(i).getString("goods_name"));
                 hashMap.put("shop", goodsList.getJSONObject(i).getString("mall_name"));
                 hashMap.put("goods_sign", goodsList.getJSONObject(i).getString("goods_sign"));
