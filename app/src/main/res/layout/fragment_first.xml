@@ -21,6 +21,8 @@
                         android:orientation="horizontal"
                         android:paddingTop="5dp"
                         android:paddingBottom="5dp"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true"
                         app:layout_constraintTop_toTopOf="@id/linear_layout_all"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
@@ -33,6 +35,9 @@
                                 android:hint="@string/input_hint_text"
                                 android:layout_marginStart="8dp"
                                 android:autofillHints=""
+                                android:singleLine="true"
+                                android:maxLines="1"
+                                android:imeOptions="actionSearch"
                                 android:background="@drawable/edit_text_style"/>
                         <Button
                                 android:id="@+id/search_button"

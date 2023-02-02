@@ -7,21 +7,29 @@ import android.content.pm.PackageInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
+import android.view.*;
 
-import android.view.WindowManager;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.*;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.LinearLayoutCompat;
 import androidx.fragment.app.Fragment;
+import com.example.coupon.animation.CustomLoadingDialog;
 import com.example.coupon.databinding.FragmentFirstBinding;
 
 import com.example.coupon.controller.HttpRequestController;
 import com.example.coupon.adapter.MyAdapter;
+import com.nostra13.universalimageloader.cache.disc.impl.UnlimitedDiskCache;
+import com.nostra13.universalimageloader.cache.disc.naming.Md5FileNameGenerator;
+import com.nostra13.universalimageloader.cache.memory.impl.UsingFreqLimitedMemoryCache;
+import com.nostra13.universalimageloader.core.DisplayImageOptions;
+import com.nostra13.universalimageloader.core.ImageLoader;
+import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
+import com.nostra13.universalimageloader.core.download.BaseImageDownloader;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.net.URLEncoder;
 import java.util.*;
 
@@ -29,10 +37,19 @@ import java.util.*;
 public class FirstFragment extends Fragment {
 
     private FragmentFirstBinding binding;
-
+    private CustomLoadingDialog customLoadingDialog;
     private int widthPixel = 0;
     private int heightPixel = 0;
     private float density = 0;
+    private ImageLoader imageLoader;
+
+    private DisplayImageOptions options = new DisplayImageOptions.Builder()
+            .showImageOnLoading(R.mipmap.loading)
+            .showImageForEmptyUri(R.mipmap.loading)
+            .showImageOnFail(R.mipmap.loading)
+            .cacheInMemory(true)
+            .cacheOnDisk(true)
+            .build();
 
     public void setWidthPixel(int widthPixel) {
         this.widthPixel = widthPixel;
@@ -67,6 +84,26 @@ public class FirstFragment extends Fragment {
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        File picPath = new File(requireContext().getExternalCacheDir().getPath());
+        if (!picPath.exists()) {
+            picPath.mkdirs();
+        }
+        ImageLoaderConfiguration configuration = new ImageLoaderConfiguration.Builder(requireContext())
+                .memoryCacheExtraOptions(300, 300)
+                .diskCacheExtraOptions(300, 300, null)
+                .threadPoolSize(3)
+                .denyCacheImageMultipleSizesInMemory()
+                .memoryCache(new UsingFreqLimitedMemoryCache(10485760))
+                .memoryCacheSize(10485760)
+                .diskCacheFileNameGenerator(new Md5FileNameGenerator())
+                .diskCache(new UnlimitedDiskCache(picPath))
+                .diskCacheSize(209715200)
+                .defaultDisplayImageOptions(options)
+                .imageDownloader(new BaseImageDownloader(requireContext(), 10000, 30000))
+                .build();
+        ImageLoader.getInstance().init(configuration);
+        this.imageLoader = ImageLoader.getInstance();
+
         getScreenSizeDp();
         EditText editText = view.findViewById(R.id.key_word);
         ViewGroup.LayoutParams param = editText.getLayoutParams();
@@ -76,7 +113,6 @@ public class FirstFragment extends Fragment {
         param = button.getLayoutParams();
         param.width = (int) (getWidthPixel() * 0.25);
         button.setLayoutParams(param);
-// 135  1080
         LinearLayoutCompat linearLayout = view.findViewById(R.id.tb);
         int marginStartSize = (int) ((getWidthPixel()/getDensity() - 36 * 4) / 5 * getDensity());
         ViewGroup.MarginLayoutParams paramMargin = (ViewGroup.MarginLayoutParams) linearLayout.getLayoutParams();
@@ -102,8 +138,19 @@ public class FirstFragment extends Fragment {
             @Override
             public void onClick(View view) {
                 runShowGoodList();
-//                NavHostFragment.findNavController(FirstFragment.this)
-//                        .navigate(R.id.action_FirstFragment_to_SecondFragment);
+//                NavHostFragment.findNavController(FirstFragment.this).navigate(R.id.action_FirstFragment_to_SecondFragment);
+            }
+        });
+
+        binding.keyWord.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
+                if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                    //hideKeyboard(view);
+                    runShowGoodList();
+                    return true;
+                }
+                return false;
             }
         });
 
@@ -153,11 +200,15 @@ public class FirstFragment extends Fragment {
 //        View view;
 //    }
 
+    @SuppressLint("UseCompatLoadingForDrawables")
     public void runShowGoodList() {
+        customLoadingDialog = new CustomLoadingDialog(requireContext());
+        customLoadingDialog.show();
         new Thread(new Runnable() {
             @Override
             public void run() {
                 onShowGoodList();
+                customLoadingDialog.dismiss();
             }
         }).start();
     }
@@ -171,9 +222,7 @@ public class FirstFragment extends Fragment {
             url = httpRequestController.generateUrlPathForList(keyWord, 1);
         }
         List<HashMap<String, Object>> arrayList = httpRequestController.parseGoodList(url);
-        MyAdapter myAdapter = new MyAdapter(this.getContext(), arrayList);
-//        SimpleAdapter simpleAdapter = new SimpleAdapter(this.getContext(), arrayList, R.layout.good_list_layout,
-//                new String[]{"img", "title", "coupon_price", "coupon_text", "sale_price", "final_price_text", "final_price", "shop"}, new int[]{R.id.img, R.id.title, R.id.coupon_price, R.id.coupon_text, R.id.sale_price, R.id.final_price_text, R.id.final_price, R.id.shop});
+        MyAdapter myAdapter = new MyAdapter(arrayList, this.imageLoader);
         ListView listView = requireView().findViewById(R.id.good_list_view);
         listView.post(new Runnable() {
             @Override
@@ -198,6 +247,11 @@ public class FirstFragment extends Fragment {
         setWidthPixel(dm.widthPixels);
         setHeightPixel(dm.heightPixels);
         setDensity(dm.density);
+    }
+
+    public void hideKeyboard(View view) {
+        InputMethodManager manager = (InputMethodManager) view.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+        manager.hideSoftInputFromWindow(view.getWindowToken(), 0);
     }
 
 //    public void jumpToGoodDetailPage(HashMap<String, Object> hashMap) {

@@ -6,7 +6,6 @@ import android.graphics.Paint;
 import android.graphics.drawable.BitmapDrawable;
 import android.media.Image;
 import android.os.Environment;
-import android.util.LruCache;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,12 +13,7 @@ import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 import com.example.coupon.R;
-import com.nostra13.universalimageloader.cache.disc.impl.UnlimitedDiskCache;
-import com.nostra13.universalimageloader.cache.disc.naming.Md5FileNameGenerator;
-import com.nostra13.universalimageloader.cache.memory.impl.LruMemoryCache;
-import com.nostra13.universalimageloader.core.DisplayImageOptions;
 import com.nostra13.universalimageloader.core.ImageLoader;
-import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
 
 import java.io.File;
 import java.util.HashMap;
@@ -27,37 +21,13 @@ import java.util.List;
 import java.util.Objects;
 
 public class MyAdapter extends BaseAdapter {
-    private Context context;
     private final List<HashMap<String, Object>> data;
     private final ImageLoader imageLoader;
 
-    private DisplayImageOptions options = new DisplayImageOptions.Builder()
-            .showImageOnLoading(R.mipmap.loading)
-            .showImageForEmptyUri(R.mipmap.loading)
-            .showImageOnFail(R.mipmap.loading)
-            .cacheInMemory(true)
-            .cacheOnDisk(true)
-            .build();
-
-    public MyAdapter(Context context, List<HashMap<String, Object>> data) {
+    public MyAdapter(List<HashMap<String, Object>> data, ImageLoader imageLoader) {
         super();
         this.data = data;
-        this.context = context;
-        File picPath = new File(Environment.getExternalStorageDirectory().getPath() + File.separator + "coupon" + File.separator + "images");
-        ImageLoaderConfiguration configuration = new ImageLoaderConfiguration.Builder(context)
-                .memoryCacheExtraOptions(300, 300)
-                .diskCacheExtraOptions(300, 300, null)
-                .threadPoolSize(3)
-                .denyCacheImageMultipleSizesInMemory()
-                .memoryCache(new LruMemoryCache(10485760))
-                .memoryCacheSize(10485760)
-                .diskCacheFileNameGenerator(new Md5FileNameGenerator())
-                .diskCache(new UnlimitedDiskCache(picPath))
-                .diskCacheSize(209715200)
-                .defaultDisplayImageOptions(options)
-                .build();
-        ImageLoader.getInstance().init(configuration);
-        imageLoader = ImageLoader.getInstance();
+        this.imageLoader = imageLoader;
     }
 
     @Override
