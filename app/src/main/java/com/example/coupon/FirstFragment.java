@@ -1,11 +1,16 @@
 package com.example.coupon;
 
 import android.annotation.SuppressLint;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.util.DisplayMetrics;
 import android.view.*;
 
@@ -20,6 +25,7 @@ import com.example.coupon.databinding.FragmentFirstBinding;
 
 import com.example.coupon.controller.HttpRequestController;
 import com.example.coupon.adapter.MyAdapter;
+import com.example.coupon.dataObject.fragmentParamsDo;
 import com.nostra13.universalimageloader.cache.disc.impl.UnlimitedDiskCache;
 import com.nostra13.universalimageloader.cache.disc.naming.Md5FileNameGenerator;
 import com.nostra13.universalimageloader.cache.memory.impl.UsingFreqLimitedMemoryCache;
@@ -27,6 +33,7 @@ import com.nostra13.universalimageloader.core.DisplayImageOptions;
 import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
 import com.nostra13.universalimageloader.core.download.BaseImageDownloader;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -38,12 +45,31 @@ public class FirstFragment extends Fragment {
 
     private FragmentFirstBinding binding;
     private CustomLoadingDialog customLoadingDialog;
-    private int widthPixel = 0;
-    private int heightPixel = 0;
-    private float density = 0;
     private ImageLoader imageLoader;
+    private ListView listView;
+    private MyAdapter myAdapter;
+    private List<HashMap<String, Object>> arrayList = new ArrayList<>();
 
-    private DisplayImageOptions options = new DisplayImageOptions.Builder()
+    private Handler handler = new Handler(Looper.getMainLooper()) {
+        @Override
+        public void handleMessage(@NonNull Message msg) {
+            super.handleMessage(msg);
+            switch (msg.what) {
+                case 0:
+                    Toast.makeText(requireContext().getApplicationContext(), "~ 我是有底线的 ~", Toast.LENGTH_LONG).show();
+                    break;
+                case 1:
+                    LinearLayoutCompat linearLayout = requireView().findViewById(R.id.linear_layout_sort);
+                    linearLayout.setVisibility(View.GONE);
+                    break;
+                case 2:
+                    LinearLayoutCompat linearLayout1 = requireView().findViewById(R.id.linear_layout_sort);
+                    linearLayout1.setVisibility(View.VISIBLE);
+                    break;
+            }
+        }
+    };
+    private final DisplayImageOptions options = new DisplayImageOptions.Builder()
             .showImageOnLoading(R.mipmap.loading)
             .showImageForEmptyUri(R.mipmap.loading)
             .showImageOnFail(R.mipmap.loading)
@@ -51,32 +77,11 @@ public class FirstFragment extends Fragment {
             .cacheOnDisk(true)
             .build();
 
-    public void setWidthPixel(int widthPixel) {
-        this.widthPixel = widthPixel;
-    }
-    public int getWidthPixel() {
-        return this.widthPixel;
-    }
-
-    public void setHeightPixel(int heightPixel) {
-        this.heightPixel = heightPixel;
-    }
-    public int getHeightPixel() {
-        return heightPixel;
-     }
-
-     public void setDensity(float density) {
-        this.density = density;
-     }
-
-     public float getDensity() {
-        return this.density;
-     }
-
     HttpRequestController httpRequestController = new HttpRequestController();
+    fragmentParamsDo fp = new fragmentParamsDo();
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NotNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         binding = FragmentFirstBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
@@ -103,18 +108,19 @@ public class FirstFragment extends Fragment {
                 .build();
         ImageLoader.getInstance().init(configuration);
         this.imageLoader = ImageLoader.getInstance();
+        this.listView = requireView().findViewById(R.id.good_list_view);
 
         getScreenSizeDp();
         EditText editText = view.findViewById(R.id.key_word);
         ViewGroup.LayoutParams param = editText.getLayoutParams();
-        param.width = (int) (getWidthPixel() * 0.7);
+        param.width = (int) (fp.getWidthPixel() * 0.7);
         editText.setLayoutParams(param);
         Button button = view.findViewById(R.id.search_button);
         param = button.getLayoutParams();
-        param.width = (int) (getWidthPixel() * 0.25);
+        param.width = (int) (fp.getWidthPixel() * 0.25);
         button.setLayoutParams(param);
         LinearLayoutCompat linearLayout = view.findViewById(R.id.tb);
-        int marginStartSize = (int) ((getWidthPixel()/getDensity() - 36 * 4) / 5 * getDensity());
+        int marginStartSize = (int) ((fp.getWidthPixel()/fp.getDensity() - 36 * 4) / 5 * fp.getDensity());
         ViewGroup.MarginLayoutParams paramMargin = (ViewGroup.MarginLayoutParams) linearLayout.getLayoutParams();
         paramMargin.setMarginStart(marginStartSize);
         linearLayout.setLayoutParams(paramMargin);
@@ -137,6 +143,8 @@ public class FirstFragment extends Fragment {
         binding.searchButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                initData(true);
+                hideKeyboard(view);
                 runShowGoodList();
 //                NavHostFragment.findNavController(FirstFragment.this).navigate(R.id.action_FirstFragment_to_SecondFragment);
             }
@@ -146,7 +154,8 @@ public class FirstFragment extends Fragment {
             @Override
             public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
                 if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                    //hideKeyboard(view);
+                    initData(true);
+                    hideKeyboard(view);
                     runShowGoodList();
                     return true;
                 }
@@ -154,13 +163,83 @@ public class FirstFragment extends Fragment {
             }
         });
 
+        binding.sortAll.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (httpRequestController.getPlatform().equals("pdd")) {
+                    fp.setSort("0");
+                } else {
+                    fp.setSort("");
+                }
+                if (httpRequestController.getPlatform().equals("jd")) {
+                    fp.setSortType("desc");
+                }
+                clickSortChangeColor(R.id.sort_all);
+                initData(false);
+                runShowGoodList();
+            }
+        });
+
+        binding.sortPrice.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (httpRequestController.getPlatform().equals("tb")) {
+                    fp.setSort("price_asc");
+                }
+                if (httpRequestController.getPlatform().equals("jd")) {
+                    fp.setSort("1");
+                    fp.setSortType("asc");
+                }
+                if (httpRequestController.getPlatform().equals("pdd")) {
+                    fp.setSort("3");
+                }
+                clickSortChangeColor(R.id.sort_price);
+                initData(false);
+                runShowGoodList();
+            }
+        });
+
+        binding.sortVolume.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (httpRequestController.getPlatform().equals("tb")) {
+                    fp.setSort("total_sales_des");
+                }
+                if (httpRequestController.getPlatform().equals("jd")) {
+                    fp.setSort("4");
+                    fp.setSortType("desc");
+                }
+                if (httpRequestController.getPlatform().equals("pdd")) {
+                    fp.setSort("6");
+                }
+                clickSortChangeColor(R.id.sort_volume);
+                initData(false);
+                runShowGoodList();
+            }
+        });
+        binding.sortCoupon.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                TextView textView = requireView().findViewById(R.id.sort_coupon);
+                if (fp.getHasCoupon()) {
+                    fp.setHasCoupon(false);
+                    textView.setTextColor(0xFF888888);
+                } else {
+                    fp.setHasCoupon(true);
+                    textView.setTextColor(0xFFFF5000);
+                }
+                initData(false);
+                runShowGoodList();
+            }
+        });
+
         binding.tb.setOnClickListener(new View.OnClickListener() {
             @SuppressLint("ResourceAsColor")
             @Override
             public void onClick(View view) {
-                String n = requireContext().getResources().getResourceEntryName(view.getId());
                 httpRequestController.setPlatform(requireContext().getResources().getResourceEntryName(view.getId()));
                 clickButtonColorImg(R.id.tb_text, "tb");
+                initData(true);
                 runShowGoodList();
             }
         });
@@ -168,9 +247,9 @@ public class FirstFragment extends Fragment {
         binding.jd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String n = requireContext().getResources().getResourceEntryName(view.getId());
                 httpRequestController.setPlatform(requireContext().getResources().getResourceEntryName(view.getId()));
                 clickButtonColorImg(R.id.jd_text, "jd");
+                initData(true);
                 runShowGoodList();
             }
         });
@@ -178,9 +257,9 @@ public class FirstFragment extends Fragment {
         binding.pdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String n = requireContext().getResources().getResourceEntryName(view.getId());
                 httpRequestController.setPlatform(requireContext().getResources().getResourceEntryName(view.getId()));
                 clickButtonColorImg(R.id.pdd_text, "pdd");
+                initData(true);
                 runShowGoodList();
             }
         });
@@ -188,10 +267,35 @@ public class FirstFragment extends Fragment {
         binding.wm.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                httpRequestController.setPlatform(requireContext().getResources().getResourceEntryName(view.getId()));
+                //httpRequestController.setPlatform(requireContext().getResources().getResourceEntryName(view.getId()));
                 clickButtonColorImg(R.id.wm_text, "wm");
             }
         });
+        binding.activityElem.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                fp.setActivityType("ele");
+            }
+        });
+        binding.activityTb.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                fp.setActivityType("tb");
+            }
+        });
+        binding.activityJd.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                fp.setActivityType("jd");
+            }
+        });
+        binding.activityPdd.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                fp.setActivityType("pdd");
+            }
+        });
+        runShowGoodList();
     }
 
 //    @NonNull
@@ -217,36 +321,72 @@ public class FirstFragment extends Fragment {
         String keyWord = binding.keyWord.getText().toString().trim();
         String url = "";
         if (keyWord.equals("")) {
-            url = httpRequestController.generateUrlPathForList(keyWord, 1);
+            handler.sendEmptyMessage(1);
+            url = httpRequestController.generateUrlPathForRecommend(fp.getPageNo());
         } else {
-            url = httpRequestController.generateUrlPathForList(keyWord, 1);
+            handler.sendEmptyMessage(2);
+            url = httpRequestController.generateUrlPathForList(keyWord, fp.getSort(), fp.getSortType(), fp.getHasCoupon(), fp.getPageNo());
         }
-        List<HashMap<String, Object>> arrayList = httpRequestController.parseGoodList(url);
-        MyAdapter myAdapter = new MyAdapter(arrayList, this.imageLoader);
-        ListView listView = requireView().findViewById(R.id.good_list_view);
-        listView.post(new Runnable() {
-            @Override
-            public void run() {
-                listView.setAdapter(myAdapter);
-                AdapterView.OnItemClickListener onItemClickListener = new AdapterView.OnItemClickListener() {
-                    @Override
-                    public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                        HashMap<String, Object> itemHashMap = arrayList.get(i);
-                        jumpToPurchasePage(itemHashMap);
+        List<HashMap<String, Object>> result = httpRequestController.parseGoodList(url, keyWord);
+        if (result.size() > 0) {
+            listView.post(new Runnable() {
+                @Override
+                public void run() {
+                    arrayList.addAll(result);
+                    if (myAdapter != null) {
+                        myAdapter.notifyDataSetChanged();
+                    } else {
+                        myAdapter = new MyAdapter(arrayList, imageLoader);
+                        listView.setAdapter(myAdapter);
+                        AdapterView.OnItemClickListener onItemClickListener = new AdapterView.OnItemClickListener() {
+                            @Override
+                            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                                HashMap<String, Object> itemHashMap = arrayList.get(i);
+                                jumpToPurchasePage(itemHashMap);
+                            }
+                        };
+                        AdapterView.OnItemLongClickListener onItemLongClickListener = new AdapterView.OnItemLongClickListener() {
+                            @Override
+                            public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
+                                TextView textView = view.findViewById(R.id.title);
+                                ClipboardManager clipboardManager = (ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
+                                ClipData clipData = ClipData.newPlainText(null, textView.getText());
+                                clipboardManager.setPrimaryClip(clipData);
+                                Toast.makeText(requireContext().getApplicationContext(), "复制商品标题成功", Toast.LENGTH_LONG).show();
+                                return true;
+                            }
+                        };
+                        listView.setOnItemClickListener(onItemClickListener);
                     }
-                };
-                listView.setOnItemClickListener(onItemClickListener);
-            }
-        });
+                }
+            });
+
+            listView.setOnScrollListener(new AbsListView.OnScrollListener() {
+                @Override
+                public void onScrollStateChanged(AbsListView absListView, int i) {
+                    if (i == 0 && absListView.getLastVisiblePosition() == absListView.getCount() - 1) {
+                        fp.setPageNo(fp.getPageNo() + 1);
+                        runShowGoodList();
+                    }
+                }
+
+                @Override
+                public void onScroll(AbsListView absListView, int i, int i1, int i2) {
+
+                }
+            });
+        } else {
+            handler.sendEmptyMessage(0);
+        }
     }
 
     public void getScreenSizeDp() {
         WindowManager wm = (WindowManager) this.requireContext().getSystemService(Context.WINDOW_SERVICE);
         DisplayMetrics dm = new DisplayMetrics();
         wm.getDefaultDisplay().getMetrics(dm);
-        setWidthPixel(dm.widthPixels);
-        setHeightPixel(dm.heightPixels);
-        setDensity(dm.density);
+        fp.setWidthPixel(dm.widthPixels);
+        fp.setHeightPixel(dm.heightPixels);
+        fp.setDensity(dm.density);
     }
 
     public void hideKeyboard(View view) {
@@ -292,29 +432,30 @@ public class FirstFragment extends Fragment {
 //    }
 
     public void jumpToPurchasePage(HashMap<String, Object> hashMap) {
+        customLoadingDialog = new CustomLoadingDialog(requireContext());
+        customLoadingDialog.show();
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
                     if (isPkgInstalled()) {
                         JSONObject result = generatePromotionUrl(hashMap,true);
+                        customLoadingDialog.dismiss();
                         Intent intent = new Intent();
                         intent.setAction("android.intent.action.VIEW");
                         intent.setData(Uri.parse(result.getString("urlPath")));
                         startActivity(intent);
                     } else {
                         JSONObject result = generatePromotionUrl(hashMap, false);
-                        if (httpRequestController.getPlatform().equals("tb")) {
-                            Intent intent = new Intent();
-                            intent.setAction("android.intent.action.VIEW");
-                            intent.setData(Uri.parse(result.getString("urlPath")));
-                            startActivity(intent);
-                        }
-                        if (httpRequestController.getPlatform().equals("pdd")) {
-                            String appId = result.getString("appId");
-                            String pagePath = result.getString("path");
-                        }
-                        // Toast.makeText(requireContext().getApplicationContext(), "复制淘口令成功，请在手机淘宝打开", Toast.LENGTH_LONG).show();
+                        customLoadingDialog.dismiss();
+                        Intent intent = new Intent();
+                        intent.setAction("android.intent.action.VIEW");
+                        intent.setData(Uri.parse(result.getString("urlPath")));
+                        startActivity(intent);
+                        //if (httpRequestController.getPlatform().equals("pdd")) {
+                        //    String appId = result.getString("appId");
+                        //    String pagePath = result.getString("path");
+                        //}
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -375,8 +516,9 @@ public class FirstFragment extends Fragment {
                 if (isApp) {
                     result.put("urlPath", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getString("schema_url"));
                 } else {
-                    result.put("appId", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getJSONObject("we_app_info").getString("app_id"));
-                    result.put("path", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getJSONObject("we_app_info").getString("page_path"));
+                    //result.put("appId", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getJSONObject("we_app_info").getString("app_id"));
+                    //result.put("path", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getJSONObject("we_app_info").getString("page_path"));
+                    result.put("urlPath", "");
                 }
             }
             if (httpRequestController.getPlatform().equals("jd")) {
@@ -386,14 +528,43 @@ public class FirstFragment extends Fragment {
                     String path = "{\"category\":\"jump\",\"des\":\"m\",\"url\":\"" + generateResult.getString("data") + "\"}";
                     result.put("urlPath", "openapp.jdmobile://virtual?params=" + URLEncoder.encode(path, "UTF-8"));
                 } else {
-                    result.put("appId", "wx91d27dbf599dff74");
-                    result.put("path", "pages/union/proxy/proxy?spreadUrl=" + generateResult.getString("data"));
+                    //result.put("appId", "wx91d27dbf599dff74");
+                    //result.put("path", "pages/union/proxy/proxy?spreadUrl=" + generateResult.getString("data"));
+                    result.put("urlPath", generateResult.getString("data"));
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
         return result;
+    }
+
+    public void initData(Boolean isAll) {
+        arrayList = new ArrayList<>();
+        myAdapter = null;
+        binding.keyWord.clearFocus();
+        fp.setPageNo(1);
+        if (isAll) {
+            fp.setSort("");
+            fp.setSortType("");
+            fp.setHasCoupon(false);
+            TextView textView = requireView().findViewById(R.id.sort_coupon);
+            textView.setTextColor(0xFF888888);
+            clickSortChangeColor(-1);
+        }
+    }
+
+    public void clickSortChangeColor(int textId) {
+        int[] textIds = {R.id.sort_all, R.id.sort_price, R.id.sort_volume};
+        TextView textView;
+        for (int i:textIds) {
+            textView = requireView().findViewById(i);
+            if (i == textId) {
+                textView.setTextColor(0xFFFF5000);
+            } else {
+                textView.setTextColor(0xFF888888);
+            }
+        }
     }
 
     public void clickButtonColorImg(int textId, String name) {
@@ -435,6 +606,10 @@ public class FirstFragment extends Fragment {
         } else {
             imageView.setImageResource(R.mipmap.wm);
         }
+    }
+
+    public void showActivity() {
+
     }
 
     @Override

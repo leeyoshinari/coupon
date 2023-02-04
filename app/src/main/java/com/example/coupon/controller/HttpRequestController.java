@@ -1,9 +1,6 @@
 package com.example.coupon.controller;
 
 import android.annotation.SuppressLint;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.widget.ExpandableListAdapter;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -11,7 +8,7 @@ import org.json.JSONObject;
 import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
+import java.math.BigDecimal;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -21,20 +18,20 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class HttpRequestController {
-    private static String TB_URL = "https://eco.taobao.com/router/rest";        // 淘宝联盟 url
-    private static String TB_APP_SECRET = "ad114d7bdaef1534e3d4b10837b1066b";       // 应用AppSecret
-    private static String TB_APP_KEY = "32482043";      // 应用app_key
-    private static String TB_PID_LAST = "111189250370";     // 推广位PID最后一位
-    private static String JD_URL = "https://router.jd.com/api";     // 京东官方 url
-    private static String JD_APP_KEY = "3496742e2d5a2fde480d356ec922da1e";
-    private static String JD_APP_SECRET = "3046bbee1ede4d3583943cbd33c73bf4";
-    private static String PDD_URL = "https://gw-api.pinduoduo.com/api/router";       // 多多进宝 url
-    private static String PDD_SECRET = "2440d8f47d626bb837e4ea3f2920d3966ec37726";  // 拼多多应用client_secret
-    private static String PDD_CLIENT_ID = "ed3db9f07b2a4476bddb07a223c6d68e";   // 拼多多应用client_id
-
+    private static final String TB_URL = "https://eco.taobao.com/router/rest";        // 淘宝联盟 url
+    private static final String TB_APP_SECRET = "ad114d7bdaef1534e3d4b10837b1066b";       // 应用AppSecret
+    private static final String TB_APP_KEY = "32482043";      // 应用app_key
+    private static final String TB_PID_LAST = "111189250370";     // 推广位PID最后一位
+    private static final String JD_URL = "https://router.jd.com/api";     // 京东官方 url
+    private static final String JD_APP_KEY = "3496742e2d5a2fde480d356ec922da1e";
+    private static final String JD_APP_SECRET = "3046bbee1ede4d3583943cbd33c73bf4";
+    private static final String JD_PID = "1002712393_4100329194_3003427429";
+    private static final String PDD_URL = "https://gw-api.pinduoduo.com/api/router";       // 多多进宝 url
+    private static final String PDD_SECRET = "2440d8f47d626bb837e4ea3f2920d3966ec37726";  // 拼多多应用client_secret
+    private static final String PDD_CLIENT_ID = "ed3db9f07b2a4476bddb07a223c6d68e";   // 拼多多应用client_id
     // 拼多多推广位PID
-    private static String PDD_PID = "15084399_190061927";
-    private static String PDD_custom_parameters = "{\"uid\":\"15084399_190061927\"}";
+    private static final String PDD_PID = "15084399_190061927";
+    private static final String PDD_custom_parameters = "{\"uid\":\"15084399_190061927\"}";
 
     private String platform = "tb";
 
@@ -49,7 +46,7 @@ public class HttpRequestController {
         return this.platform;
     }
 
-    public String generateUrlPathForList(String searchKey, int pageNo) {
+    public String generateUrlPathForList(String searchKey, String sort, String sortType, Boolean hasCoupon, int pageNo) {
         JSONObject params = new JSONObject();
         try {
             if (getPlatform().equals("tb")) {
@@ -60,24 +57,77 @@ public class HttpRequestController {
                 params.put("timestamp", dateFormat.format(new Date())); // System.currentTimeMillis() + 28800000
                 params.put("method", "taobao.tbk.dg.material.optional");
                 params.put("v", "2.0");
-                params.put("platform", 2);
                 params.put("page_no", pageNo);
                 params.put("q", searchKey);
+                if (!"".equals(sort)) {
+                    params.put("sort", sort);
+                }
+                if (hasCoupon) {
+                    params.put("has_coupon", true);
+                }
                 params.put("sign", encryptParams(params, TB_APP_SECRET));
             }
             if (getPlatform().equals("jd")) {
-                return queryGoodsListForJd(searchKey, pageNo);
+                return queryGoodsListForJd(searchKey, sort, sortType, hasCoupon, pageNo);
             }
             if (getPlatform().equals("pdd")) {
                 params.put("client_id", PDD_CLIENT_ID);
                 params.put("pid", PDD_PID);
                 params.put("data_type", "JSON");
-                params.put("sort_type", 0);
+                if ("".equals(sort)) {
+                    params.put("sort_type", 0);
+                } else {
+                    params.put("sort_type", Integer.valueOf(sort));
+                }
                 params.put("timestamp", Long.valueOf(System.currentTimeMillis() / 1000));
                 params.put("type", "pdd.ddk.goods.search");
                 params.put("page", pageNo);
                 params.put("custom_parameters", PDD_custom_parameters);
                 params.put("keyword", searchKey);
+                if (hasCoupon) {
+                    params.put("with_coupon", true);
+                }
+                params.put("sign", encryptParams(params, PDD_SECRET));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return getUrlByPlatform(params);
+    }
+
+    public String generateUrlPathForRecommend(int pageNo) {
+        JSONObject params = new JSONObject();
+        try {
+            if (getPlatform().equals("tb")) {
+                params.put("format", "JSON");
+                params.put("sign_method", "md5");
+                params.put("app_key", TB_APP_KEY);
+                params.put("adzone_id", TB_PID_LAST);
+                params.put("timestamp", dateFormat.format(new Date())); // System.currentTimeMillis() + 28800000
+                params.put("method", "taobao.tbk.dg.optimus.material");
+                params.put("v", "2.0");
+                params.put("page_no", pageNo);
+                params.put("material_id", 27446);
+                params.put("sign", encryptParams(params, TB_APP_SECRET));
+            }
+            if (getPlatform().equals("jd")) {
+                params.put("app_key", JD_APP_KEY);
+                params.put("method", "jd.union.open.goods.jingfen.query");
+                params.put("format", "JSON");
+                params.put("timestamp", dateFormat.format(new Date()));
+                params.put("v", "1.0");
+                params.put("sign_method", "md5");
+                params.put("param_json", "{\"goodsReq\": {\"eliteId\":22,\"pageIndex\":" + pageNo + ",\"pid\":\"" + JD_PID + "\"}}");
+                params.put("sign", encryptParams(params, JD_APP_SECRET));
+            }
+            if (getPlatform().equals("pdd")) {
+                params.put("client_id", PDD_CLIENT_ID);
+                params.put("pid", PDD_PID);
+                params.put("data_type", "JSON");
+                params.put("timestamp", Long.valueOf(System.currentTimeMillis() / 1000));
+                params.put("type", "pdd.ddk.goods.recommend.get");
+                params.put("offset", (pageNo - 1) * 20);
+                params.put("channel_type", 5);
                 params.put("sign", encryptParams(params, PDD_SECRET));
             }
         } catch (Exception e) {
@@ -107,6 +157,46 @@ public class HttpRequestController {
                 params.put("type", "pdd.ddk.goods.detail");
                 params.put("goods_sign", hashMap.get("goods_sign"));
                 params.put("search_id", hashMap.get("search_id"));
+                params.put("custom_parameters", PDD_custom_parameters);
+                params.put("sign", encryptParams(params, PDD_SECRET));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return getUrlByPlatform(params);
+    }
+
+    public String generateUrlPathForActivity(JSONObject activityParams) {
+        JSONObject params = new JSONObject();
+        try {
+            if (getPlatform().equals("tb")) {
+                params.put("format", "JSON");
+                params.put("sign_method", "md5");
+                params.put("app_key", TB_APP_KEY);
+                params.put("adzone_id", TB_PID_LAST);
+                params.put("timestamp", dateFormat.format(new Date())); // System.currentTimeMillis() + 28800000
+                params.put("method", "taobao.tbk.activity.info.get");
+                params.put("v", "2.0");
+                params.put("activity_material_id", activityParams.getString("activity_material_id"));
+                params.put("sign", encryptParams(params, TB_APP_SECRET));
+            }
+            if (getPlatform().equals("jd")) {
+                params.put("app_key", JD_APP_KEY);
+                params.put("method", "jd.union.open.activity.query");
+                params.put("format", "JSON");
+                params.put("timestamp", dateFormat.format(new Date()));
+                params.put("v", "1.0");
+                params.put("sign_method", "md5");
+                params.put("param_json", "{\"activityReq\": {\"poolId\":1}}"); //1：热门会场；2：热门榜单
+                params.put("sign", encryptParams(params, JD_APP_SECRET));
+            }
+            if (getPlatform().equals("pdd")) {
+                params.put("client_id", PDD_CLIENT_ID);
+                params.put("pid", PDD_PID);
+                params.put("data_type", "JSON");
+                params.put("sort_type", 0);
+                params.put("timestamp", Long.valueOf(System.currentTimeMillis() / 1000));
+                params.put("type", "pdd.ddk.goods.search");
                 params.put("custom_parameters", PDD_custom_parameters);
                 params.put("sign", encryptParams(params, PDD_SECRET));
             }
@@ -188,18 +278,30 @@ public class HttpRequestController {
         }
     }
 
-    public List<HashMap<String, Object>> parseGoodList(String urlPath) {
+    public List<HashMap<String, Object>> parseGoodList(String urlPath, String keyWord) {
         List<HashMap<String, Object>> arrayList = new ArrayList<>();
         try {
             JSONObject result = httpRequestGet(urlPath);
-            if (getPlatform().equals("tb")) {
-                arrayList = parseTbGoodList(result);
-            }
-            if (getPlatform().equals("jd")) {
-                arrayList = parseJdGoodList(result);
-            }
-            if (getPlatform().equals("pdd")) {
-                arrayList = parsePddGoodList(result);
+            if ("".equals(keyWord)) {
+                if (getPlatform().equals("tb")) {
+                    arrayList = parseTbGoodListOfRecommend(result);
+                }
+                if (getPlatform().equals("jd")) {
+                    arrayList = parseJdGoodListOfRecommend(result);
+                }
+                if (getPlatform().equals("pdd")) {
+                    arrayList = parsePddGoodListOfRecommend(result);
+                }
+            } else {
+                if (getPlatform().equals("tb")) {
+                    arrayList = parseTbGoodList(result);
+                }
+                if (getPlatform().equals("jd")) {
+                    arrayList = parseJdGoodList(result);
+                }
+                if (getPlatform().equals("pdd")) {
+                    arrayList = parsePddGoodList(result);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -253,25 +355,6 @@ public class HttpRequestController {
         return result;
     }
 
-    public Bitmap getImageBitmap(String url) {
-        Bitmap bitmap = null;
-        HttpsURLConnection conn = null;
-        try {
-            URL imgUrl = new URL(url);
-            conn = (HttpsURLConnection) imgUrl.openConnection();
-            conn.setConnectTimeout(30000);
-            conn.setDoInput(true);
-            bitmap = BitmapFactory.decodeStream(conn.getInputStream());
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
-            }
-        }
-        return bitmap;
-    }
-
     public String stringToMd5(String inputStr) throws NoSuchAlgorithmException {
         MessageDigest messageDigest = MessageDigest.getInstance("MD5");
         byte[] data = inputStr.getBytes(StandardCharsets.UTF_8);
@@ -303,17 +386,17 @@ public class HttpRequestController {
         return urlPath;
     }
 
-    public String queryGoodsListForJd(String searchKey, int pageNo) {
+    public String queryGoodsListForJd(String searchKey, String sort, String sortType, Boolean hasCoupon, int pageNo) {
         String urlPath = null;
         try {
             JSONObject params = new JSONObject();
             params.put("apikey", "25ee321ae0f7f9be");
             params.put("pageindex", pageNo);
             params.put("keyword", searchKey);
-            params.put("sort", "");
-            params.put("sortname", "");
+            params.put("sort", sortType);
+            params.put("sortname", sort);
             params.put("ispg", 0);
-            params.put("iscoupon", 0);
+            params.put("iscoupon", hasCoupon ? 1 : 0);
             params.put("isunion", "1");
             urlPath = "https://api-gw.haojingke.com/index.php/v1/api/jd/goodslist?" + convertJsonToUrlParams(params);
         } catch (Exception e) {
@@ -338,45 +421,26 @@ public class HttpRequestController {
         return urlPath;
     }
 
-    @SuppressLint("DefaultLocale")
     public List<HashMap<String, Object>> parseTbGoodList(JSONObject goodObj) {
         List<HashMap<String, Object>> arrayList = new ArrayList<>();
         try {
             goodObj.getJSONObject("tbk_dg_material_optional_response");
             goodObj.getJSONObject("tbk_dg_material_optional_response").getJSONObject("result_list");
             JSONArray goodsList = goodObj.getJSONObject("tbk_dg_material_optional_response").getJSONObject("result_list").getJSONArray("map_data");
-            HashMap<String, Object> hashMap = new HashMap<>();
-            for (int i = 0; i < goodsList.length(); i++) {
-                hashMap = new HashMap<>();
-                hashMap.put("img", goodsList.getJSONObject(i).getString("pict_url")); // pict_url
-                hashMap.put("title_img", goodsList.getJSONObject(i).getJSONObject("small_images").getJSONArray("string"));
-                hashMap.put("item_id", goodsList.getJSONObject(i).getString("item_id"));
-                hashMap.put("title", goodsList.getJSONObject(i).getString("title"));
-                hashMap.put("shop", goodsList.getJSONObject(i).getString("shop_title"));
-                int volume = goodsList.getJSONObject(i).getInt("volume");
-                String volumeText = String.valueOf(volume);
-                if (volume > 9999) {
-                    volumeText = (int) volume / 10000 + "万";
-                } else if (volume > 999) {
-                    volumeText = (int) volume / 1000 + "千";
-                }
-                if (goodsList.getJSONObject(i).has("coupon_amount") && goodsList.getJSONObject(i).getDouble("coupon_amount") > 0) {
-                    hashMap.put("coupon_url", goodsList.getJSONObject(i).getString("coupon_share_url"));
-                    hashMap.put("coupon_price", goodsList.getJSONObject(i).getString("coupon_amount"));
-                    hashMap.put("coupon_text", "元优惠券   " + volumeText + "人已购买");
-                    hashMap.put("sale_price", goodsList.getJSONObject(i).getString("zk_final_price"));
-                    hashMap.put("final_price_text", " 券后 ￥");
-                    hashMap.put("final_price", String.format("%.2f", goodsList.getJSONObject(i).getDouble("zk_final_price") - goodsList.getJSONObject(i).getDouble("coupon_amount")));
-                } else {
-                    hashMap.put("item_url", goodsList.getJSONObject(i).getString("url"));
-                    hashMap.put("coupon_price", "");
-                    hashMap.put("coupon_text", volumeText + "人已购买");
-                    hashMap.put("sale_price", "");
-                    hashMap.put("final_price_text", "");
-                    hashMap.put("final_price", goodsList.getJSONObject(i).getString("zk_final_price"));
-                }
-                arrayList.add(hashMap);
-            }
+            arrayList = getTbGoodList(goodsList);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return arrayList;
+    }
+
+    public List<HashMap<String, Object>> parseTbGoodListOfRecommend(JSONObject goodObj) {
+        List<HashMap<String, Object>> arrayList = new ArrayList<>();
+        try {
+            goodObj.getJSONObject("tbk_dg_optimus_material_response");
+            goodObj.getJSONObject("tbk_dg_optimus_material_response").getJSONObject("result_list");
+            JSONArray goodsList = goodObj.getJSONObject("tbk_dg_optimus_material_response").getJSONObject("result_list").getJSONArray("map_data");
+            arrayList = getTbGoodList(goodsList);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -389,71 +453,43 @@ public class HttpRequestController {
         try {
             goodObj.getJSONObject("data");
             JSONArray goodsList = goodObj.getJSONObject("data").getJSONArray("data");
-            HashMap<String, Object> hashMap = new HashMap<>();
-            for (int i = 0; i < goodsList.length(); i++) {
-                hashMap = new HashMap<>();
-                hashMap.put("skuId", goodsList.getJSONObject(i).getString("skuId"));
-                hashMap.put("img", goodsList.getJSONObject(i).getJSONObject("imageInfo").getJSONArray("imageList").getJSONObject(0).getString("url"));
-                hashMap.put("title", goodsList.getJSONObject(i).getString("skuName"));
-                hashMap.put("shop", goodsList.getJSONObject(i).getJSONObject("shopInfo").getString("shopName"));
-                int volume = goodsList.getJSONObject(i).getInt("inOrderCount30Days");
-                String volumeText = String.valueOf(volume);
-                if (volume > 9999) {
-                    volumeText = (int) volume / 10000 + "万";
-                } else if (volume > 999) {
-                    volumeText = (int) volume / 1000 + "千";
-                }
-                if (goodsList.getJSONObject(i).has("couponInfo") && goodsList.getJSONObject(i).getJSONObject("couponInfo").getJSONArray("couponList").length() > 0 &&
-                        goodsList.getJSONObject(i).getJSONObject("couponInfo").getJSONArray("couponList").getJSONObject(0).getDouble("quota") < goodsList.getJSONObject(i).getJSONObject("priceInfo").getDouble("price")) {
-                    hashMap.put("coupon_price", String.format("%.2f", goodsList.getJSONObject(i).getJSONObject("couponInfo").getJSONArray("couponList").getJSONObject(0).getDouble("discount")));
-                    hashMap.put("coupon_text", "元优惠券   " + volumeText + "人已购买");
-                    hashMap.put("sale_price", goodsList.getJSONObject(i).getJSONObject("priceInfo").getDouble("price"));
-                    hashMap.put("final_price_text", " 券后 ￥");
-                    hashMap.put("final_price", String.format("%.2f", (goodsList.getJSONObject(i).getJSONObject("priceInfo").getDouble("price") - goodsList.getJSONObject(i).getJSONObject("couponInfo").getJSONArray("couponList").getJSONObject(0).getDouble("discount"))));
-                } else {
-                    hashMap.put("coupon_price", "");
-                    hashMap.put("coupon_text", volumeText + "人已购买");
-                    hashMap.put("sale_price", "");
-                    hashMap.put("final_price_text", "");
-                    hashMap.put("final_price", String.format("%.2f", goodsList.getJSONObject(i).getJSONObject("priceInfo").getDouble("price")));
-                }
-                arrayList.add(hashMap);
-            }
+            arrayList = getJdGoodList(goodsList);
         } catch (Exception e) {
             e.printStackTrace();
         }
         return arrayList;
     }
 
-    @SuppressLint("DefaultLocale")
+    public List<HashMap<String, Object>> parseJdGoodListOfRecommend(JSONObject goodObj) {
+        List<HashMap<String, Object>> arrayList = new ArrayList<>();
+        try {
+            goodObj.getJSONObject("jd_union_open_goods_jingfen_query_response");
+            JSONArray goodsList = new JSONObject(goodObj.getJSONObject("jd_union_open_goods_jingfen_query_response").getString("result")).getJSONArray("data");
+            arrayList = getJdGoodList(goodsList);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return arrayList;
+    }
+
     public List<HashMap<String, Object>> parsePddGoodList(JSONObject goodObj) {
         List<HashMap<String, Object>> arrayList = new ArrayList<>();
         try {
             goodObj.getJSONObject("goods_search_response");
             JSONArray goodsList = goodObj.getJSONObject("goods_search_response").getJSONArray("goods_list");
-            HashMap<String, Object> hashMap = new HashMap<>();
-            for (int i = 0; i < goodsList.length(); i++) {
-                hashMap = new HashMap<>();
-                hashMap.put("img", goodsList.getJSONObject(i).getString("goods_thumbnail_url")); //goods_thumbnail_url
-                hashMap.put("title", goodsList.getJSONObject(i).getString("goods_name"));
-                hashMap.put("shop", goodsList.getJSONObject(i).getString("mall_name"));
-                hashMap.put("goods_sign", goodsList.getJSONObject(i).getString("goods_sign"));
-                hashMap.put("search_id", goodsList.getJSONObject(i).getString("search_id"));
-                if (goodsList.getJSONObject(i).has("coupon_discount") && goodsList.getJSONObject(i).getInt("coupon_discount") > 0) {
-                    hashMap.put("coupon_price", String.format("%.2f", goodsList.getJSONObject(i).getDouble("coupon_discount") / 100));
-                    hashMap.put("coupon_text", "元优惠券   " + goodsList.getJSONObject(i).getString("sales_tip") + "人已购买");
-                    hashMap.put("sale_price", String.format("%.2f", goodsList.getJSONObject(i).getDouble("min_group_price") / 100));
-                    hashMap.put("final_price_text", " 券后 ￥");
-                    hashMap.put("final_price", String.format("%.2f", (goodsList.getJSONObject(i).getDouble("min_group_price") - goodsList.getJSONObject(i).getDouble("coupon_discount")) / 100));
-                } else {
-                    hashMap.put("coupon_price", "");
-                    hashMap.put("coupon_text", goodsList.getJSONObject(i).getString("sales_tip") + "人已购买");
-                    hashMap.put("sale_price", "");
-                    hashMap.put("final_price_text", "");
-                    hashMap.put("final_price", String.format("%.2f", goodsList.getJSONObject(i).getDouble("min_group_price") / 100));
-                }
-                arrayList.add(hashMap);
-            }
+            arrayList = getPddGoodList(goodsList);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return arrayList;
+    }
+
+    public List<HashMap<String, Object>> parsePddGoodListOfRecommend(JSONObject goodObj) {
+        List<HashMap<String, Object>> arrayList = new ArrayList<>();
+        try {
+            goodObj.getJSONObject("goods_basic_detail_response");
+            JSONArray goodsList = goodObj.getJSONObject("goods_basic_detail_response").getJSONArray("list");
+            arrayList = getPddGoodList(goodsList);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -498,5 +534,128 @@ public class HttpRequestController {
             e.printStackTrace();
         }
         return goodDetail;
+    }
+
+    @SuppressLint("DefaultLocale")
+    public List<HashMap<String, Object>> getTbGoodList(JSONArray goodsList) {
+        List<HashMap<String, Object>> arrayList = new ArrayList<>();
+        try {
+            HashMap<String, Object> hashMap;
+            for (int i = 0; i < goodsList.length(); i++) {
+                hashMap = new HashMap<>();
+                String pictUrl = goodsList.getJSONObject(i).getString("pict_url");
+                if (!pictUrl.contains("https:")) {
+                    pictUrl = "https:" + pictUrl;
+                }
+                hashMap.put("img", pictUrl);
+                hashMap.put("item_id", goodsList.getJSONObject(i).getString("item_id"));
+                hashMap.put("title", goodsList.getJSONObject(i).getString("title"));
+                hashMap.put("shop", goodsList.getJSONObject(i).getString("shop_title"));
+                int volume = goodsList.getJSONObject(i).getInt("volume");
+                String volumeText = String.valueOf(volume);
+                if (volume > 9999) {
+                    volumeText = (int) volume / 10000 + "万";
+                } else if (volume > 999) {
+                    volumeText = (int) volume / 1000 + "千";
+                }
+                if (goodsList.getJSONObject(i).has("coupon_amount") && goodsList.getJSONObject(i).getDouble("coupon_amount") > 0) {
+                    hashMap.put("coupon_url", goodsList.getJSONObject(i).getString("coupon_share_url"));
+                    hashMap.put("coupon_price", goodsList.getJSONObject(i).getString("coupon_amount"));
+                    hashMap.put("coupon_text", "元优惠券   " + volumeText + "人已购买");
+                    hashMap.put("sale_price", goodsList.getJSONObject(i).getString("zk_final_price"));
+                    hashMap.put("final_price_text", " 券后 ￥");
+                    hashMap.put("final_price", convertByBigDecimal(String.format("%.2f", goodsList.getJSONObject(i).getDouble("zk_final_price") - goodsList.getJSONObject(i).getDouble("coupon_amount"))));
+                } else {
+                    hashMap.put("item_url", goodsList.getJSONObject(i).getString("url"));
+                    hashMap.put("coupon_price", "");
+                    hashMap.put("coupon_text", volumeText + "人已购买");
+                    hashMap.put("sale_price", "");
+                    hashMap.put("final_price_text", "");
+                    hashMap.put("final_price", goodsList.getJSONObject(i).getString("zk_final_price"));
+                }
+                arrayList.add(hashMap);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return arrayList;
+    }
+
+    @SuppressLint("DefaultLocale")
+    public List<HashMap<String, Object>> getJdGoodList(JSONArray goodsList) {
+        List<HashMap<String, Object>> arrayList = new ArrayList<>();
+        try {
+            HashMap<String, Object> hashMap;
+            for (int i = 0; i < goodsList.length(); i++) {
+                hashMap = new HashMap<>();
+                hashMap.put("skuId", goodsList.getJSONObject(i).getString("skuId"));
+                hashMap.put("img", goodsList.getJSONObject(i).getJSONObject("imageInfo").getJSONArray("imageList").getJSONObject(0).getString("url"));
+                hashMap.put("title", goodsList.getJSONObject(i).getString("skuName"));
+                hashMap.put("shop", goodsList.getJSONObject(i).getJSONObject("shopInfo").getString("shopName"));
+                int volume = goodsList.getJSONObject(i).getInt("inOrderCount30Days");
+                String volumeText = String.valueOf(volume);
+                if (volume > 9999) {
+                    volumeText = (int) volume / 10000 + "万";
+                } else if (volume > 999) {
+                    volumeText = (int) volume / 1000 + "千";
+                }
+                if (goodsList.getJSONObject(i).has("couponInfo") && goodsList.getJSONObject(i).getJSONObject("couponInfo").getJSONArray("couponList").length() > 0 &&
+                        goodsList.getJSONObject(i).getJSONObject("couponInfo").getJSONArray("couponList").getJSONObject(0).getDouble("quota") <= goodsList.getJSONObject(i).getJSONObject("priceInfo").getDouble("price")) {
+                    hashMap.put("coupon_price", convertByBigDecimal(String.format("%.2f", goodsList.getJSONObject(i).getJSONObject("couponInfo").getJSONArray("couponList").getJSONObject(0).getDouble("discount"))));
+                    hashMap.put("coupon_text", "元优惠券   " + volumeText + "人已购买");
+                    hashMap.put("sale_price", convertByBigDecimal(String.valueOf(goodsList.getJSONObject(i).getJSONObject("priceInfo").getDouble("price"))));
+                    hashMap.put("final_price_text", " 券后 ￥");
+                    hashMap.put("final_price", convertByBigDecimal(String.format("%.2f", (goodsList.getJSONObject(i).getJSONObject("priceInfo").getDouble("price") - goodsList.getJSONObject(i).getJSONObject("couponInfo").getJSONArray("couponList").getJSONObject(0).getDouble("discount")))));
+                } else {
+                    hashMap.put("coupon_price", "");
+                    hashMap.put("coupon_text", volumeText + "人已购买");
+                    hashMap.put("sale_price", "");
+                    hashMap.put("final_price_text", "");
+                    hashMap.put("final_price", convertByBigDecimal(String.format("%.2f", goodsList.getJSONObject(i).getJSONObject("priceInfo").getDouble("price"))));
+                }
+                arrayList.add(hashMap);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return arrayList;
+    }
+
+    @SuppressLint("DefaultLocale")
+    public List<HashMap<String, Object>> getPddGoodList(JSONArray goodsList) {
+        List<HashMap<String, Object>> arrayList = new ArrayList<>();
+        try {
+            HashMap<String, Object> hashMap;
+            for (int i = 0; i < goodsList.length(); i++) {
+                hashMap = new HashMap<>();
+                hashMap.put("img", goodsList.getJSONObject(i).getString("goods_thumbnail_url")); //goods_thumbnail_url
+                hashMap.put("title", goodsList.getJSONObject(i).getString("goods_name"));
+                hashMap.put("shop", goodsList.getJSONObject(i).getString("mall_name"));
+                hashMap.put("goods_sign", goodsList.getJSONObject(i).getString("goods_sign"));
+                hashMap.put("search_id", goodsList.getJSONObject(i).getString("search_id"));
+                if (goodsList.getJSONObject(i).has("coupon_discount") && goodsList.getJSONObject(i).getInt("coupon_discount") > 0) {
+                    hashMap.put("coupon_price", convertByBigDecimal(String.format("%.2f", goodsList.getJSONObject(i).getDouble("coupon_discount") / 100)));
+                    hashMap.put("coupon_text", "元优惠券   " + goodsList.getJSONObject(i).getString("sales_tip") + "人已购买");
+                    hashMap.put("sale_price", convertByBigDecimal(String.format("%.2f", goodsList.getJSONObject(i).getDouble("min_group_price") / 100)));
+                    hashMap.put("final_price_text", " 券后 ￥");
+                    hashMap.put("final_price", convertByBigDecimal(String.format("%.2f", (goodsList.getJSONObject(i).getDouble("min_group_price") - goodsList.getJSONObject(i).getDouble("coupon_discount")) / 100)));
+                } else {
+                    hashMap.put("coupon_price", "");
+                    hashMap.put("coupon_text", goodsList.getJSONObject(i).getString("sales_tip") + "人已购买");
+                    hashMap.put("sale_price", "");
+                    hashMap.put("final_price_text", "");
+                    hashMap.put("final_price", convertByBigDecimal(String.format("%.2f", goodsList.getJSONObject(i).getDouble("min_group_price") / 100)));
+                }
+                arrayList.add(hashMap);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return arrayList;
+    }
+
+    public String convertByBigDecimal(String value) {
+        BigDecimal bigDecimal = new BigDecimal(value);
+        return bigDecimal.stripTrailingZeros().toPlainString();
     }
 }

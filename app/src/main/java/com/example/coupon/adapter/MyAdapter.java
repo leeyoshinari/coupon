@@ -1,11 +1,7 @@
 package com.example.coupon.adapter;
 
 import android.annotation.SuppressLint;
-import android.content.Context;
 import android.graphics.Paint;
-import android.graphics.drawable.BitmapDrawable;
-import android.media.Image;
-import android.os.Environment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,7 +11,6 @@ import android.widget.TextView;
 import com.example.coupon.R;
 import com.nostra13.universalimageloader.core.ImageLoader;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;

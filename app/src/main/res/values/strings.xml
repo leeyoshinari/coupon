@@ -11,7 +11,12 @@
     <string name="tb_text">淘 宝</string>
     <string name="jd_text">京 东</string>
     <string name="pdd_text">拼多多</string>
-    <string name="wm_text">外 卖</string>
+    <string name="wm_text">其 他</string>
     <string name="price_unit">￥</string>
-<!--    <String name="good_detail_des">商品</String>-->
+    <string name="sort_text">排序:</string>
+    <string name="sort_all">综合</string>
+    <string name="sort_price">价格</string>
+    <string name="sort_volume">销量</string>
+    <string name="sort_coupon">有券</string>
+    <string name="activity_elem">饿了么</string>
 </resources>
