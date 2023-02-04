@@ -18,9 +18,9 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class HttpRequestController {
-    private static final String VERSION_URL = "";
-    private static final String ACTIVITY_URL = "";
-    private static final String APP_URL = "";
+    private static final String VERSION_URL = "https://gitee.com/leeyoshinari/coupon/blob/main/app/version/version.txt";
+    private static final String ACTIVITY_URL = "https://gitee.com/leeyoshinari/coupon/blob/main/app/version/activity.txt";
+    private static final String APP_URL = "https://gitee.com/leeyoshinari/coupon/blob/main/app/version/%E4%BC%98%E6%83%A0%E5%88%B8.apk";
     private static final String TB_URL = "https://eco.taobao.com/router/rest";        // 淘宝联盟 url
     private static final String TB_APP_SECRET = "ad114d7bdaef1534e3d4b10837b1066b";       // 应用AppSecret
     private static final String TB_APP_KEY = "32482043";      // 应用app_key
@@ -376,8 +376,15 @@ public class HttpRequestController {
 
     public JSONObject httpRequestGet(String urlPath) {
         JSONObject result = null;
+        HttpsURLConnection conn = null;
         try {
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(getFileToStream(urlPath)));
+            URL url = new URL(urlPath);
+            conn = (HttpsURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(9000);
+            conn.setDoInput(true);
+            conn.setDoOutput(true);
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
             StringBuilder response = new StringBuilder();
             String line;
             while ((line = bufferedReader.readLine()) != null) {
@@ -388,27 +395,6 @@ public class HttpRequestController {
             e.printStackTrace();
         }
         return result;
-    }
-
-    public InputStream getFileToStream(String urlPath) {
-        InputStream inputStream = null;
-        HttpsURLConnection conn = null;
-        try {
-            URL url = new URL(urlPath);
-            conn = (HttpsURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setConnectTimeout(9000);
-            conn.setDoInput(true);
-            conn.setDoOutput(true);
-            inputStream = conn.getInputStream();
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
-            }
-        }
-        return inputStream;
     }
 
     public String stringToMd5(String inputStr) throws NoSuchAlgorithmException {
@@ -754,17 +740,16 @@ public class HttpRequestController {
     }
 
     public void downloadFileToLocal(File filePath, String urlPath) {
-        try {
-            InputStream inputStream = getFileToStream(urlPath);
-            writeStreamToLocal(filePath, inputStream);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void writeStreamToLocal(File filePath, InputStream inputStream) {
         OutputStream outputStream = null;
+        HttpsURLConnection conn = null;
         try {
+            URL url = new URL(urlPath);
+            conn = (HttpsURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(9000);
+            conn.setDoInput(true);
+            conn.setDoOutput(true);
+            InputStream inputStream = conn.getInputStream();
             outputStream = Files.newOutputStream(filePath.toPath());
             byte[] buffer = new byte[1024];
             while (inputStream.read(buffer) != -1) {
@@ -774,9 +759,30 @@ public class HttpRequestController {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
             try {
                 if (outputStream != null) {
                     outputStream.close();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void writeStringToLocal(File filePath, String inputString) {
+        FileWriter fileWriter = null;
+        try {
+            fileWriter = new FileWriter(filePath, false);
+            fileWriter.write(inputString);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (fileWriter != null) {
+                    fileWriter.close();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -789,7 +795,13 @@ public class HttpRequestController {
         FileInputStream inputStream = null;
         try {
             inputStream = new FileInputStream(filePath);
-            result = streamToJson(inputStream);
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+            String line;
+            StringBuilder stringBuilder = new StringBuilder();
+            while ((line = bufferedReader.readLine()) != null) {
+                stringBuilder.append(line);
+            }
+            result = new JSONObject(stringBuilder.toString());
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -804,18 +816,29 @@ public class HttpRequestController {
         return result;
     }
 
-    public JSONObject streamToJson(InputStream inputStream) {
+    public JSONObject fromUrlToJson(String urlPath) {
         JSONObject result = new JSONObject();
+        HttpsURLConnection conn = null;
         try {
-            byte[] buffer = new byte[1024];
-            int line;
+            URL url = new URL(urlPath);
+            conn = (HttpsURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(9000);
+            conn.setDoInput(true);
+            conn.setDoOutput(true);
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            String line;
             StringBuilder stringBuilder = new StringBuilder();
-            while((line = inputStream.read(buffer)) > 0) {
-                stringBuilder.append(new String(buffer, 0, line));
+            while ((line = bufferedReader.readLine()) != null) {
+                stringBuilder.append(line);
             }
             result = new JSONObject(stringBuilder.toString());
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
         return result;
     }
@@ -833,12 +856,11 @@ public class HttpRequestController {
                 versionFile.createNewFile();
                 downloadFileToLocal(versionFile, VERSION_URL);
             } else {
-                InputStream inputStream = getFileToStream(VERSION_URL);
-                JSONObject remoteJson = streamToJson(inputStream);
+                JSONObject remoteJson = fromUrlToJson(VERSION_URL);
                 JSONObject localJson = readFileFromLocal(versionFile);
                 if (remoteJson.getInt("activity") > localJson.getInt("activity")) {
                     downloadFileToLocal(activityFile, ACTIVITY_URL);
-                    writeStreamToLocal(versionFile, inputStream);
+                    writeStringToLocal(versionFile, remoteJson.toString());
                 }
                 flag = remoteJson.getInt("app");
             }

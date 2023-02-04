@@ -43,7 +43,7 @@ import java.util.*;
 
 
 public class FirstFragment extends Fragment {
-    private static final String APP_URL = "";
+    private static final String APP_URL = "https://gitee.com/leeyoshinari/coupon/blob/main/app/version/%E4%BC%98%E6%83%A0%E5%88%B8.apk";
     private FragmentFirstBinding binding;
     private CustomLoadingDialog customLoadingDialog;
     private ImageLoader imageLoader;
@@ -140,12 +140,17 @@ public class FirstFragment extends Fragment {
             return;
         }
         // 检查版本，如果需要升级，则打开浏览器下载最新版本
-        if (getAppVersion() < httpRequestController.updateVersion(picPath)) {
-            Intent intent = new Intent();
-            intent.setAction("android.intent.action.VIEW");
-            intent.setData(Uri.parse(APP_URL));
-            startActivity(intent);
-        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (getAppVersion() < httpRequestController.updateVersion(picPath)) {
+                    Intent intent = new Intent();
+                    intent.setAction("android.intent.action.VIEW");
+                    intent.setData(Uri.parse(APP_URL));
+                    startActivity(intent);
+                }
+            }
+        }).start();
         // 获取屏幕尺寸
         getScreenSizeDp();
         // 根据屏幕尺寸调整页面布局
