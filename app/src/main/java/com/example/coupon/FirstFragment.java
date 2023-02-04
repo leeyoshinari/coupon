@@ -1,16 +1,15 @@
 package com.example.coupon;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.Message;
+import android.os.*;
 import android.util.DisplayMetrics;
 import android.view.*;
 
@@ -19,7 +18,9 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.*;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.LinearLayoutCompat;
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
+import com.example.coupon.adapter.ActivityAdapter;
 import com.example.coupon.animation.CustomLoadingDialog;
 import com.example.coupon.databinding.FragmentFirstBinding;
 
@@ -36,21 +37,23 @@ import com.nostra13.universalimageloader.core.download.BaseImageDownloader;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
-import java.io.File;
+import java.io.*;
 import java.net.URLEncoder;
 import java.util.*;
 
 
 public class FirstFragment extends Fragment {
-
+    private static final String APP_URL = "";
     private FragmentFirstBinding binding;
     private CustomLoadingDialog customLoadingDialog;
     private ImageLoader imageLoader;
     private ListView listView;
     private MyAdapter myAdapter;
+    private ActivityAdapter activityAdapter;
     private List<HashMap<String, Object>> arrayList = new ArrayList<>();
 
     private Handler handler = new Handler(Looper.getMainLooper()) {
+        LinearLayoutCompat linearLayout;
         @Override
         public void handleMessage(@NonNull Message msg) {
             super.handleMessage(msg);
@@ -58,13 +61,32 @@ public class FirstFragment extends Fragment {
                 case 0:
                     Toast.makeText(requireContext().getApplicationContext(), "~ 我是有底线的 ~", Toast.LENGTH_LONG).show();
                     break;
+                case 10:
+                    Toast.makeText(requireContext().getApplicationContext(), "权限不足", Toast.LENGTH_LONG).show();
+                    break;
                 case 1:
-                    LinearLayoutCompat linearLayout = requireView().findViewById(R.id.linear_layout_sort);
+                    linearLayout = requireView().findViewById(R.id.linear_layout_sort); // 排序布局隐藏
                     linearLayout.setVisibility(View.GONE);
                     break;
                 case 2:
-                    LinearLayoutCompat linearLayout1 = requireView().findViewById(R.id.linear_layout_sort);
-                    linearLayout1.setVisibility(View.VISIBLE);
+                    linearLayout = requireView().findViewById(R.id.linear_layout_sort); // 排序布局显示
+                    linearLayout.setVisibility(View.VISIBLE);
+                    break;
+                case 3:
+                    linearLayout = requireView().findViewById(R.id.linear_layout_search); // 搜索布局隐藏
+                    linearLayout.setVisibility(View.GONE);
+                    break;
+                case 4:
+                    linearLayout = requireView().findViewById(R.id.linear_layout_search);  //搜索布局显示
+                    linearLayout.setVisibility(View.VISIBLE);
+                    break;
+                case 5:
+                    linearLayout = requireView().findViewById(R.id.linear_layout_activity); // 活动布局隐藏
+                    linearLayout.setVisibility(View.GONE);
+                    break;
+                case 6:
+                    linearLayout = requireView().findViewById(R.id.linear_layout_activity);  //活动布局显示
+                    linearLayout.setVisibility(View.VISIBLE);
                     break;
             }
         }
@@ -89,10 +111,12 @@ public class FirstFragment extends Fragment {
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        // 创建本地文件夹
         File picPath = new File(requireContext().getExternalCacheDir().getPath());
         if (!picPath.exists()) {
             picPath.mkdirs();
         }
+        // 初始化 imageloader
         ImageLoaderConfiguration configuration = new ImageLoaderConfiguration.Builder(requireContext())
                 .memoryCacheExtraOptions(300, 300)
                 .diskCacheExtraOptions(300, 300, null)
@@ -108,9 +132,23 @@ public class FirstFragment extends Fragment {
                 .build();
         ImageLoader.getInstance().init(configuration);
         this.imageLoader = ImageLoader.getInstance();
+
         this.listView = requireView().findViewById(R.id.good_list_view);
 
+        // 检查读写权限
+        if (checkPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.MANAGE_EXTERNAL_STORAGE})) {
+            return;
+        }
+        // 检查版本，如果需要升级，则打开浏览器下载最新版本
+        if (getAppVersion() < httpRequestController.updateVersion(picPath)) {
+            Intent intent = new Intent();
+            intent.setAction("android.intent.action.VIEW");
+            intent.setData(Uri.parse(APP_URL));
+            startActivity(intent);
+        }
+        // 获取屏幕尺寸
         getScreenSizeDp();
+        // 根据屏幕尺寸调整页面布局
         EditText editText = view.findViewById(R.id.key_word);
         ViewGroup.LayoutParams param = editText.getLayoutParams();
         param.width = (int) (fp.getWidthPixel() * 0.7);
@@ -140,6 +178,7 @@ public class FirstFragment extends Fragment {
         paramMargin.setMarginStart(marginStartSize);
         linearLayout.setLayoutParams(paramMargin);
 
+        // 绑定点击事件
         binding.searchButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -239,6 +278,8 @@ public class FirstFragment extends Fragment {
             public void onClick(View view) {
                 httpRequestController.setPlatform(requireContext().getResources().getResourceEntryName(view.getId()));
                 clickButtonColorImg(R.id.tb_text, "tb");
+                handler.sendEmptyMessage(4);
+                handler.sendEmptyMessage(5);
                 initData(true);
                 runShowGoodList();
             }
@@ -249,6 +290,8 @@ public class FirstFragment extends Fragment {
             public void onClick(View view) {
                 httpRequestController.setPlatform(requireContext().getResources().getResourceEntryName(view.getId()));
                 clickButtonColorImg(R.id.jd_text, "jd");
+                handler.sendEmptyMessage(4);
+                handler.sendEmptyMessage(5);
                 initData(true);
                 runShowGoodList();
             }
@@ -259,6 +302,8 @@ public class FirstFragment extends Fragment {
             public void onClick(View view) {
                 httpRequestController.setPlatform(requireContext().getResources().getResourceEntryName(view.getId()));
                 clickButtonColorImg(R.id.pdd_text, "pdd");
+                handler.sendEmptyMessage(4);
+                handler.sendEmptyMessage(5);
                 initData(true);
                 runShowGoodList();
             }
@@ -267,42 +312,52 @@ public class FirstFragment extends Fragment {
         binding.wm.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                //httpRequestController.setPlatform(requireContext().getResources().getResourceEntryName(view.getId()));
                 clickButtonColorImg(R.id.wm_text, "wm");
+                handler.sendEmptyMessage(1);
+                handler.sendEmptyMessage(3);
+                handler.sendEmptyMessage(6);
+                fp.setActivityType("ele");
+                clickActivityChangeColor(R.id.activity_elem);
+                initData(true);
+                runShowActivity();
             }
         });
         binding.activityElem.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 fp.setActivityType("ele");
+                clickActivityChangeColor(R.id.activity_elem);
+                runShowActivity();
             }
         });
         binding.activityTb.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 fp.setActivityType("tb");
+                clickActivityChangeColor(R.id.activity_tb);
+                runShowActivity();
             }
         });
         binding.activityJd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 fp.setActivityType("jd");
+                clickActivityChangeColor(R.id.activity_jd);
+                runShowActivity();
             }
         });
         binding.activityPdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 fp.setActivityType("pdd");
+                clickActivityChangeColor(R.id.activity_pdd);
+                runShowActivity();
             }
         });
+        handler.sendEmptyMessage(1);
+        handler.sendEmptyMessage(5);
         runShowGoodList();
     }
-
-//    @NonNull
-//    @Override
-//    public View getView(int position, @Nullable View convertView, @Nullable ViewGroup parent) {
-//        View view;
-//    }
 
     @SuppressLint("UseCompatLoadingForDrawables")
     public void runShowGoodList() {
@@ -357,6 +412,7 @@ public class FirstFragment extends Fragment {
                             }
                         };
                         listView.setOnItemClickListener(onItemClickListener);
+                        listView.setOnItemLongClickListener(onItemLongClickListener);
                     }
                 }
             });
@@ -438,7 +494,7 @@ public class FirstFragment extends Fragment {
             @Override
             public void run() {
                 try {
-                    if (isPkgInstalled()) {
+                    if (isPkgInstalled(httpRequestController.getPlatform())) {
                         JSONObject result = generatePromotionUrl(hashMap,true);
                         customLoadingDialog.dismiss();
                         Intent intent = new Intent();
@@ -464,19 +520,19 @@ public class FirstFragment extends Fragment {
         }).start();
     }
 
-    public Boolean isPkgInstalled() {
+    public Boolean isPkgInstalled(String platform) {
         PackageInfo packageInfo = null;
         try {
-            packageInfo = requireContext().getPackageManager().getPackageInfo(getPkgName(), 0);
+            packageInfo = requireContext().getPackageManager().getPackageInfo(getPkgName(platform), 0);
         } catch (Exception e) {
             e.printStackTrace();
         }
         return packageInfo != null;
     }
 
-    public String getPkgName(){
+    public String getPkgName(String platform){
         String pkgName = "com.taobao.taobao";
-        switch (httpRequestController.getPlatform()) {
+        switch (platform) {
             case "jd":
                 pkgName = "com.jingdong.app.mall";
                 break;
@@ -485,6 +541,15 @@ public class FirstFragment extends Fragment {
                 break;
             case "wm":
                 pkgName = "com.xunmng.pindduo";
+                break;
+            case "ele":
+                pkgName = "me.ele";
+                break;
+            case "alipay":
+                pkgName = "com.eg.android.AlipayGphone";
+                break;
+            case "wechat":
+                pkgName = "com.tencent.mm";
                 break;
         }
         return pkgName;
@@ -518,7 +583,7 @@ public class FirstFragment extends Fragment {
                 } else {
                     //result.put("appId", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getJSONObject("we_app_info").getString("app_id"));
                     //result.put("path", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getJSONObject("we_app_info").getString("page_path"));
-                    result.put("urlPath", "");
+                    result.put("urlPath", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getString("url"));
                 }
             }
             if (httpRequestController.getPlatform().equals("jd")) {
@@ -542,6 +607,8 @@ public class FirstFragment extends Fragment {
     public void initData(Boolean isAll) {
         arrayList = new ArrayList<>();
         myAdapter = null;
+        activityAdapter = null;
+        listView.setAdapter(null);
         binding.keyWord.clearFocus();
         fp.setPageNo(1);
         if (isAll) {
@@ -556,6 +623,19 @@ public class FirstFragment extends Fragment {
 
     public void clickSortChangeColor(int textId) {
         int[] textIds = {R.id.sort_all, R.id.sort_price, R.id.sort_volume};
+        TextView textView;
+        for (int i:textIds) {
+            textView = requireView().findViewById(i);
+            if (i == textId) {
+                textView.setTextColor(0xFFFF5000);
+            } else {
+                textView.setTextColor(0xFF888888);
+            }
+        }
+    }
+
+    public void clickActivityChangeColor(int textId) {
+        int[] textIds = {R.id.activity_elem, R.id.activity_tb, R.id.activity_pdd, R.id.activity_jd};
         TextView textView;
         for (int i:textIds) {
             textView = requireView().findViewById(i);
@@ -608,10 +688,100 @@ public class FirstFragment extends Fragment {
         }
     }
 
-    public void showActivity() {
-
+    public void runShowActivity() {
+        customLoadingDialog = new CustomLoadingDialog(requireContext());
+        customLoadingDialog.show();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                showActivity();
+                customLoadingDialog.dismiss();
+            }
+        }).start();
     }
 
+    public void showActivity() {
+        try {
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("activityType", fp.getActivityType());
+            String urlPath = httpRequestController.generateUrlPathForActivity(jsonObject);
+            arrayList = httpRequestController.parseActivityList(urlPath, fp.getActivityType());
+            listView.post(new Runnable() {
+                @Override
+                public void run() {
+                    activityAdapter = new ActivityAdapter(arrayList, imageLoader);
+                    listView.setAdapter(activityAdapter);
+                    AdapterView.OnItemClickListener onItemClickListener = new AdapterView.OnItemClickListener() {
+                        @Override
+                        public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                            HashMap<String, Object> itemHashMap = arrayList.get(i);
+                            jumpToActivityPage(itemHashMap);
+                        }
+                    };
+                    listView.setOnItemClickListener(onItemClickListener);
+                }
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void jumpToActivityPage(HashMap<String, Object> hashMap) {
+        try {
+            String urlPath = Objects.requireNonNull(hashMap.get("urlPath")).toString();
+            if (isPkgInstalled(fp.getActivityType())) {
+                if (fp.getActivityType().equals("ele")) {
+                    urlPath = "eleme:" + urlPath.replace("https:", "");
+                }
+                if (fp.getActivityType().equals("tb")) {
+                    urlPath = "taobao:" + urlPath.replace("https:", "");
+                }
+                if (fp.getActivityType().equals("jd")) {
+                    String path = "{\"category\":\"jump\",\"des\":\"m\",\"url\":\"" + urlPath + "\"}";
+                    urlPath = "openapp.jdmobile://virtual?params=" + URLEncoder.encode(path, "UTF-8");
+                }
+                Intent intent = new Intent();
+                intent.setAction("android.intent.action.VIEW");
+                intent.setData(Uri.parse(urlPath));
+                startActivity(intent);
+            } else {
+                if (isPkgInstalled("alipay") && fp.getActivityType().equals("ele")) {
+                    urlPath = "alipays://platformapi/startapp?appId=2018090761255717&page=pages/webview-redirect/webview-redirect?url=" + urlPath;
+                }
+                Intent intent = new Intent();
+                intent.setAction("android.intent.action.VIEW");
+                intent.setData(Uri.parse(urlPath));
+                startActivity(intent);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public Boolean checkPermissions(String[] permissions) {
+        List<String> mPermissionList = new ArrayList<>();
+        for (String s : permissions) {
+            if (requireContext().checkSelfPermission(s) != PackageManager.PERMISSION_GRANTED) {
+                mPermissionList.add(s);
+            }
+        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager() || mPermissionList.size() == 0) {
+            return false;
+        } else {
+            handler.sendEmptyMessage(10);
+            ActivityCompat.requestPermissions(requireActivity(), mPermissionList.toArray(new String[0]), 1024);
+            return true;
+        }
+    }
+
+    public int getAppVersion() {
+        try {
+            return requireContext().getPackageManager().getPackageInfo(requireContext().getPackageName(), 0).versionCode;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
     @Override
     public void onDestroyView() {
         super.onDestroyView();
