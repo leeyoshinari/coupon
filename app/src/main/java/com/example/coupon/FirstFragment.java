@@ -1,13 +1,11 @@
 package com.example.coupon;
 
-import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.*;
 import android.util.DisplayMetrics;
@@ -17,7 +15,6 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.*;
 import androidx.annotation.NonNull;
-import androidx.appcompat.widget.LinearLayoutCompat;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 import com.example.coupon.adapter.ActivityAdapter;
@@ -35,6 +32,7 @@ import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
 import com.nostra13.universalimageloader.core.download.BaseImageDownloader;
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.*;
@@ -43,50 +41,43 @@ import java.util.*;
 
 
 public class FirstFragment extends Fragment {
-    private static final String APP_URL = "https://gitee.com/leeyoshinari/coupon/blob/main/app/version/%E4%BC%98%E6%83%A0%E5%88%B8.apk";
+    private static final String APP_URL = "https://raw.githubusercontent.com/leeyoshinari/coupon/main/app/version/%E4%BC%98%E6%83%A0%E5%88%B8.apk";
     private FragmentFirstBinding binding;
     private CustomLoadingDialog customLoadingDialog;
     private ImageLoader imageLoader;
     private ListView listView;
     private MyAdapter myAdapter;
     private ActivityAdapter activityAdapter;
+    private File activityPath;
     private List<HashMap<String, Object>> arrayList = new ArrayList<>();
 
-    private Handler handler = new Handler(Looper.getMainLooper()) {
-        LinearLayoutCompat linearLayout;
+    private final Handler handler = new Handler(Looper.getMainLooper()) {
         @Override
         public void handleMessage(@NonNull Message msg) {
             super.handleMessage(msg);
             switch (msg.what) {
                 case 0:
-                    Toast.makeText(requireContext().getApplicationContext(), "~ 我是有底线的 ~", Toast.LENGTH_LONG).show();
-                    break;
-                case 10:
-                    Toast.makeText(requireContext().getApplicationContext(), "权限不足", Toast.LENGTH_LONG).show();
+                    Toast toast = Toast.makeText(requireContext().getApplicationContext(), msg.obj.toString(), Toast.LENGTH_LONG);
+                    toast.setGravity(Gravity.CENTER, 0, 0);
+                    toast.show();
                     break;
                 case 1:
-                    linearLayout = requireView().findViewById(R.id.linear_layout_sort); // 排序布局隐藏
-                    linearLayout.setVisibility(View.GONE);
+                    binding.linearLayoutSort.setVisibility(View.GONE); // 排序布局隐藏
                     break;
                 case 2:
-                    linearLayout = requireView().findViewById(R.id.linear_layout_sort); // 排序布局显示
-                    linearLayout.setVisibility(View.VISIBLE);
+                    binding.linearLayoutSort.setVisibility(View.VISIBLE); // 排序布局显示
                     break;
                 case 3:
-                    linearLayout = requireView().findViewById(R.id.linear_layout_search); // 搜索布局隐藏
-                    linearLayout.setVisibility(View.GONE);
+                    binding.linearLayoutSearch.setVisibility(View.GONE); // 搜索布局隐藏
                     break;
                 case 4:
-                    linearLayout = requireView().findViewById(R.id.linear_layout_search);  //搜索布局显示
-                    linearLayout.setVisibility(View.VISIBLE);
+                    binding.linearLayoutSearch.setVisibility(View.VISIBLE);  //搜索布局显示
                     break;
                 case 5:
-                    linearLayout = requireView().findViewById(R.id.linear_layout_activity); // 活动布局隐藏
-                    linearLayout.setVisibility(View.GONE);
+                    binding.linearLayoutActivity.setVisibility(View.GONE); // 活动布局隐藏
                     break;
                 case 6:
-                    linearLayout = requireView().findViewById(R.id.linear_layout_activity);  //活动布局显示
-                    linearLayout.setVisibility(View.VISIBLE);
+                    binding.linearLayoutActivity.setVisibility(View.VISIBLE);  //活动布局显示
                     break;
             }
         }
@@ -116,6 +107,7 @@ public class FirstFragment extends Fragment {
         if (!picPath.exists()) {
             picPath.mkdirs();
         }
+        activityPath = new File(picPath + "/activity.txt");
         // 初始化 imageloader
         ImageLoaderConfiguration configuration = new ImageLoaderConfiguration.Builder(requireContext())
                 .memoryCacheExtraOptions(300, 300)
@@ -133,17 +125,26 @@ public class FirstFragment extends Fragment {
         ImageLoader.getInstance().init(configuration);
         this.imageLoader = ImageLoader.getInstance();
 
-        this.listView = requireView().findViewById(R.id.good_list_view);
+        this.listView = binding.goodListView;
 
         // 检查读写权限
-        if (checkPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.MANAGE_EXTERNAL_STORAGE})) {
-            return;
-        }
+        // if (checkPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.MANAGE_EXTERNAL_STORAGE})) {
+        //     return;
+        // }
         // 检查版本，如果需要升级，则打开浏览器下载最新版本
         new Thread(new Runnable() {
             @Override
             public void run() {
                 if (getAppVersion() < httpRequestController.updateVersion(picPath)) {
+                    Message message = new Message();
+                    message.what = 0;
+                    message.obj = "检测到有新本版发布，即将跳转到浏览器下载最新版本";
+                    handler.sendMessage(message);
+                    try {
+                        Thread.sleep(5000L);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                     Intent intent = new Intent();
                     intent.setAction("android.intent.action.VIEW");
                     intent.setData(Uri.parse(APP_URL));
@@ -154,34 +155,28 @@ public class FirstFragment extends Fragment {
         // 获取屏幕尺寸
         getScreenSizeDp();
         // 根据屏幕尺寸调整页面布局
-        EditText editText = view.findViewById(R.id.key_word);
-        ViewGroup.LayoutParams param = editText.getLayoutParams();
-        param.width = (int) (fp.getWidthPixel() * 0.7);
-        editText.setLayoutParams(param);
-        Button button = view.findViewById(R.id.search_button);
-        param = button.getLayoutParams();
-        param.width = (int) (fp.getWidthPixel() * 0.25);
-        button.setLayoutParams(param);
-        LinearLayoutCompat linearLayout = view.findViewById(R.id.tb);
+        ViewGroup.LayoutParams param = binding.keyWord.getLayoutParams();
+        param.width = (int) (fp.getWidthPixel() * 0.78);
+        binding.keyWord.setLayoutParams(param);
+        param = binding.searchButton.getLayoutParams();
+        param.width = (int) (fp.getWidthPixel() * 0.18);
+        binding.searchButton.setLayoutParams(param);
         int marginStartSize = (int) ((fp.getWidthPixel()/fp.getDensity() - 36 * 4) / 5 * fp.getDensity());
-        ViewGroup.MarginLayoutParams paramMargin = (ViewGroup.MarginLayoutParams) linearLayout.getLayoutParams();
+        ViewGroup.MarginLayoutParams paramMargin = (ViewGroup.MarginLayoutParams) binding.tb.getLayoutParams();
         paramMargin.setMarginStart(marginStartSize);
-        linearLayout.setLayoutParams(paramMargin);
+        binding.tb.setLayoutParams(paramMargin);
 
-        linearLayout = view.findViewById(R.id.jd);
-        paramMargin = (ViewGroup.MarginLayoutParams) linearLayout.getLayoutParams();
+        paramMargin = (ViewGroup.MarginLayoutParams) binding.jd.getLayoutParams();
         paramMargin.setMarginStart(marginStartSize);
-        linearLayout.setLayoutParams(paramMargin);
+        binding.jd.setLayoutParams(paramMargin);
 
-        linearLayout = view.findViewById(R.id.pdd);
-        paramMargin = (ViewGroup.MarginLayoutParams) linearLayout.getLayoutParams();
+        paramMargin = (ViewGroup.MarginLayoutParams) binding.pdd.getLayoutParams();
         paramMargin.setMarginStart(marginStartSize);
-        linearLayout.setLayoutParams(paramMargin);
+        binding.pdd.setLayoutParams(paramMargin);
 
-        linearLayout = view.findViewById(R.id.wm);
-        paramMargin = (ViewGroup.MarginLayoutParams) linearLayout.getLayoutParams();
+        paramMargin = (ViewGroup.MarginLayoutParams) binding.wm.getLayoutParams();
         paramMargin.setMarginStart(marginStartSize);
-        linearLayout.setLayoutParams(paramMargin);
+        binding.wm.setLayoutParams(paramMargin);
 
         // 绑定点击事件
         binding.searchButton.setOnClickListener(new View.OnClickListener() {
@@ -191,6 +186,12 @@ public class FirstFragment extends Fragment {
                 hideKeyboard(view);
                 runShowGoodList();
 //                NavHostFragment.findNavController(FirstFragment.this).navigate(R.id.action_FirstFragment_to_SecondFragment);
+            }
+        });
+        binding.editClear.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                binding.keyWord.setText("");
             }
         });
 
@@ -264,13 +265,12 @@ public class FirstFragment extends Fragment {
         binding.sortCoupon.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                TextView textView = requireView().findViewById(R.id.sort_coupon);
                 if (fp.getHasCoupon()) {
                     fp.setHasCoupon(false);
-                    textView.setTextColor(0xFF888888);
+                    binding.sortCoupon.setTextColor(0xFF888888);
                 } else {
                     fp.setHasCoupon(true);
-                    textView.setTextColor(0xFFFF5000);
+                    binding.sortCoupon.setTextColor(0xFFFF5000);
                 }
                 initData(false);
                 runShowGoodList();
@@ -321,8 +321,8 @@ public class FirstFragment extends Fragment {
                 handler.sendEmptyMessage(1);
                 handler.sendEmptyMessage(3);
                 handler.sendEmptyMessage(6);
-                fp.setActivityType("ele");
-                clickActivityChangeColor(R.id.activity_elem);
+                fp.setActivityType("tb");
+                clickActivityChangeColor(R.id.activity_tb);
                 initData(true);
                 runShowActivity();
             }
@@ -359,6 +359,14 @@ public class FirstFragment extends Fragment {
                 runShowActivity();
             }
         });
+        binding.activityMt.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                fp.setActivityType("mt");
+                clickActivityChangeColor(R.id.activity_mt);
+                runShowActivity();
+            }
+        });
         handler.sendEmptyMessage(1);
         handler.sendEmptyMessage(5);
         runShowGoodList();
@@ -389,6 +397,7 @@ public class FirstFragment extends Fragment {
         }
         List<HashMap<String, Object>> result = httpRequestController.parseGoodList(url, keyWord);
         if (result.size() > 0) {
+            fp.setPageNo(fp.getPageNo() + 1);
             listView.post(new Runnable() {
                 @Override
                 public void run() {
@@ -412,7 +421,10 @@ public class FirstFragment extends Fragment {
                                 ClipboardManager clipboardManager = (ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
                                 ClipData clipData = ClipData.newPlainText(null, textView.getText());
                                 clipboardManager.setPrimaryClip(clipData);
-                                Toast.makeText(requireContext().getApplicationContext(), "复制商品标题成功", Toast.LENGTH_LONG).show();
+                                Message message = new Message();
+                                message.what = 0;
+                                message.obj = "商品标题成功复制！";
+                                handler.sendMessage(message);
                                 return true;
                             }
                         };
@@ -426,7 +438,6 @@ public class FirstFragment extends Fragment {
                 @Override
                 public void onScrollStateChanged(AbsListView absListView, int i) {
                     if (i == 0 && absListView.getLastVisiblePosition() == absListView.getCount() - 1) {
-                        fp.setPageNo(fp.getPageNo() + 1);
                         runShowGoodList();
                     }
                 }
@@ -437,7 +448,10 @@ public class FirstFragment extends Fragment {
                 }
             });
         } else {
-            handler.sendEmptyMessage(0);
+            Message message = new Message();
+            message.what = 0;
+            message.obj = "~ 我是有底线的 ~";
+            handler.sendMessage(message);
         }
     }
 
@@ -620,8 +634,7 @@ public class FirstFragment extends Fragment {
             fp.setSort("");
             fp.setSortType("");
             fp.setHasCoupon(false);
-            TextView textView = requireView().findViewById(R.id.sort_coupon);
-            textView.setTextColor(0xFF888888);
+            binding.sortCoupon.setTextColor(0xFF888888);
             clickSortChangeColor(-1);
         }
     }
@@ -640,21 +653,20 @@ public class FirstFragment extends Fragment {
     }
 
     public void clickActivityChangeColor(int textId) {
-        int[] textIds = {R.id.activity_elem, R.id.activity_tb, R.id.activity_pdd, R.id.activity_jd};
+        int[] textIds = {R.id.activity_elem, R.id.activity_tb, R.id.activity_pdd, R.id.activity_jd, R.id.activity_mt};
         TextView textView;
         for (int i:textIds) {
             textView = requireView().findViewById(i);
             if (i == textId) {
                 textView.setTextColor(0xFFFF5000);
             } else {
-                textView.setTextColor(0xFF888888);
+                textView.setTextColor(0xFFFFFFFF);
             }
         }
     }
 
     public void clickButtonColorImg(int textId, String name) {
         int[] textIds = {R.id.tb_text, R.id.jd_text, R.id.pdd_text, R.id.wm_text};
-        ImageView imageView;
         TextView textView;
         for (int i:textIds) {
             textView = requireView().findViewById(i);
@@ -664,32 +676,28 @@ public class FirstFragment extends Fragment {
                 textView.setTextColor(0xFF888888);
             }
         }
-        imageView = requireView().findViewById(R.id.tb_img);
         if ("tb".equals(name)) {
-            imageView.setImageResource(R.mipmap.tb_g);
+            binding.tbImg.setImageResource(R.mipmap.tb_g);
         } else {
-            imageView.setImageResource(R.mipmap.tb);
+            binding.tbImg.setImageResource(R.mipmap.tb);
         }
 
-        imageView = requireView().findViewById(R.id.jd_img);
         if ("jd".equals(name)) {
-            imageView.setImageResource(R.mipmap.jd_g);
+            binding.jdImg.setImageResource(R.mipmap.jd_g);
         } else {
-            imageView.setImageResource(R.mipmap.jd);
+            binding.jdImg.setImageResource(R.mipmap.jd);
         }
 
-        imageView = requireView().findViewById(R.id.pdd_img);
         if ("pdd".equals(name)) {
-            imageView.setImageResource(R.mipmap.pdd_g);
+            binding.pddImg.setImageResource(R.mipmap.pdd_g);
         } else {
-            imageView.setImageResource(R.mipmap.pdd);
+            binding.pddImg.setImageResource(R.mipmap.pdd);
         }
 
-        imageView = requireView().findViewById(R.id.wm_img);
         if ("wm".equals(name)) {
-            imageView.setImageResource(R.mipmap.wm_g);
+            binding.wmImg.setImageResource(R.mipmap.wm_g);
         } else {
-            imageView.setImageResource(R.mipmap.wm);
+            binding.wmImg.setImageResource(R.mipmap.wm);
         }
     }
 
@@ -707,23 +715,42 @@ public class FirstFragment extends Fragment {
 
     public void showActivity() {
         try {
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put("activityType", fp.getActivityType());
-            String urlPath = httpRequestController.generateUrlPathForActivity(jsonObject);
-            arrayList = httpRequestController.parseActivityList(urlPath, fp.getActivityType());
+            JSONObject localFile = httpRequestController.readFileFromLocal(activityPath);
+            JSONArray result = localFile.getJSONObject(fp.getActivityType()).getJSONArray("coupon");
+            JSONArray jsonArray = httpRequestController.getActivityList(fp.getActivityType(), result);
+            localFile = null;
             listView.post(new Runnable() {
                 @Override
                 public void run() {
-                    activityAdapter = new ActivityAdapter(arrayList, imageLoader);
+                    activityAdapter = new ActivityAdapter(jsonArray, imageLoader);
                     listView.setAdapter(activityAdapter);
                     AdapterView.OnItemClickListener onItemClickListener = new AdapterView.OnItemClickListener() {
                         @Override
                         public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                            HashMap<String, Object> itemHashMap = arrayList.get(i);
-                            jumpToActivityPage(itemHashMap);
+                            try {
+                                JSONObject itemObject = jsonArray.getJSONObject(i);
+                                jumpToActivityPage(itemObject);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    };
+                    AdapterView.OnItemLongClickListener onItemLongClickListener = new AdapterView.OnItemLongClickListener() {
+                        @Override
+                        public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
+                            return false;
                         }
                     };
                     listView.setOnItemClickListener(onItemClickListener);
+                }
+            });
+            listView.setOnScrollListener(new AbsListView.OnScrollListener() {
+                @Override
+                public void onScrollStateChanged(AbsListView absListView, int i) {
+                }
+
+                @Override
+                public void onScroll(AbsListView absListView, int i, int i1, int i2) {
                 }
             });
         } catch (Exception e) {
@@ -731,9 +758,9 @@ public class FirstFragment extends Fragment {
         }
     }
 
-    public void jumpToActivityPage(HashMap<String, Object> hashMap) {
+    public void jumpToActivityPage(JSONObject jsonObject) {
         try {
-            String urlPath = Objects.requireNonNull(hashMap.get("urlPath")).toString();
+            String urlPath = jsonObject.getString("url");
             if (isPkgInstalled(fp.getActivityType())) {
                 if (fp.getActivityType().equals("ele")) {
                     urlPath = "eleme:" + urlPath.replace("https:", "");
@@ -745,6 +772,9 @@ public class FirstFragment extends Fragment {
                     String path = "{\"category\":\"jump\",\"des\":\"m\",\"url\":\"" + urlPath + "\"}";
                     urlPath = "openapp.jdmobile://virtual?params=" + URLEncoder.encode(path, "UTF-8");
                 }
+                if (fp.getActivityType().equals("pdd")) {
+                    urlPath = "pinduoduo://com.xunmeng.pinduoduo" + urlPath;
+                }
                 Intent intent = new Intent();
                 intent.setAction("android.intent.action.VIEW");
                 intent.setData(Uri.parse(urlPath));
@@ -752,6 +782,9 @@ public class FirstFragment extends Fragment {
             } else {
                 if (isPkgInstalled("alipay") && fp.getActivityType().equals("ele")) {
                     urlPath = "alipays://platformapi/startapp?appId=2018090761255717&page=pages/webview-redirect/webview-redirect?url=" + urlPath;
+                }
+                if (fp.getActivityType().equals("pdd")) {
+                    urlPath = "https://mobile.yangkeduo.com" + urlPath;
                 }
                 Intent intent = new Intent();
                 intent.setAction("android.intent.action.VIEW");
@@ -764,17 +797,14 @@ public class FirstFragment extends Fragment {
     }
 
     public Boolean checkPermissions(String[] permissions) {
-        List<String> mPermissionList = new ArrayList<>();
-        for (String s : permissions) {
-            if (requireContext().checkSelfPermission(s) != PackageManager.PERMISSION_GRANTED) {
-                mPermissionList.add(s);
-            }
-        }
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager() || mPermissionList.size() == 0) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager()) {
             return false;
         } else {
-            handler.sendEmptyMessage(10);
-            ActivityCompat.requestPermissions(requireActivity(), mPermissionList.toArray(new String[0]), 1024);
+            Message message = new Message();
+            message.what = 0;
+            message.obj = "权限不足";
+            handler.sendMessage(message);
+            ActivityCompat.requestPermissions(requireActivity(), permissions, 1024);
             return true;
         }
     }

@@ -9,16 +9,15 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import com.example.coupon.R;
 import com.nostra13.universalimageloader.core.ImageLoader;
-
-import java.util.HashMap;
-import java.util.List;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import java.util.Objects;
 
 public class ActivityAdapter extends BaseAdapter {
-    private final List<HashMap<String, Object>> data;
+    private final JSONArray data;
     private final ImageLoader imageLoader;
 
-    public ActivityAdapter(List<HashMap<String, Object>> data, ImageLoader imageLoader) {
+    public ActivityAdapter(JSONArray data, ImageLoader imageLoader) {
         super();
         this.data = data;
         this.imageLoader = imageLoader;
@@ -26,12 +25,17 @@ public class ActivityAdapter extends BaseAdapter {
 
     @Override
     public int getCount() {
-        return data.size();
+        return data.length();
     }
 
     @Override
     public Object getItem(int position) {
-        return data.get(position);
+        try {
+            return data.getJSONObject(position);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new JSONObject();
+        }
     }
 
     @Override
@@ -52,9 +56,13 @@ public class ActivityAdapter extends BaseAdapter {
         } else {
             holder = (ActivityAdapter.ViewHolder) convertView.getTag();
         }
-        HashMap<String, Object> item = data.get(position);
-        holder.activity_title.setText(Objects.requireNonNull(item.get("title")).toString());
-        imageLoader.displayImage(Objects.requireNonNull(item.get("img")).toString(), holder.activity_img);
+        try {
+            JSONObject item = data.getJSONObject(position);
+            holder.activity_title.setText(Objects.requireNonNull(item.getString("name")));
+            imageLoader.displayImage(Objects.requireNonNull(item.getString("img")), holder.activity_img);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return convertView;
     }
 

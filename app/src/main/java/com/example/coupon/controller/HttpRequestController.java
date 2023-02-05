@@ -18,13 +18,15 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class HttpRequestController {
-    private static final String VERSION_URL = "https://gitee.com/leeyoshinari/coupon/blob/main/app/version/version.txt";
-    private static final String ACTIVITY_URL = "https://gitee.com/leeyoshinari/coupon/blob/main/app/version/activity.txt";
+    private static final String[] VERSION_URL = {"https://gitee.com/leeyoshinari/Small_Tool/raw/master/src/version.txt",
+        "https://raw.githubusercontent.com/leeyoshinari/coupon/main/app/version/version.txt"};
+    private static final String[] ACTIVITY_URL = {"https://gitee.com/leeyoshinari/Small_Tool/raw/master/src/activity.txt",
+        "https://raw.githubusercontent.com/leeyoshinari/coupon/main/app/version/activity.txt"};
     private static final String APP_URL = "https://gitee.com/leeyoshinari/coupon/blob/main/app/version/%E4%BC%98%E6%83%A0%E5%88%B8.apk";
     private static final String TB_URL = "https://eco.taobao.com/router/rest";        // 淘宝联盟 url
-    private static final String TB_APP_SECRET = "ad114d7bdaef1534e3d4b10837b1066b";       // 应用AppSecret
-    private static final String TB_APP_KEY = "32482043";      // 应用app_key
-    private static final String TB_PID_LAST = "111189250370";     // 推广位PID最后一位
+    private static final String TB_APP_SECRET = "ad114d7bdaef1534e3d4b10837b1066b"; //"e7942e96349ce8c06e917e9f1a2da869";//"ad114d7bdaef1534e3d4b10837b1066b";       // 应用AppSecret
+    private static final String TB_APP_KEY = "32482043"; //"34302640";//"32482043";      // 应用app_key
+    private static final Long TB_PID_LAST = 111189250370L; //114724700026L;//"111189250370";     // 推广位PID最后一位
     private static final String JD_URL = "https://router.jd.com/api";     // 京东官方 url
     private static final String JD_APP_KEY = "3496742e2d5a2fde480d356ec922da1e";
     private static final String JD_APP_SECRET = "3046bbee1ede4d3583943cbd33c73bf4";
@@ -62,6 +64,7 @@ public class HttpRequestController {
                 params.put("timestamp", dateFormat.format(new Date())); // System.currentTimeMillis() + 28800000
                 params.put("method", "taobao.tbk.dg.material.optional");
                 params.put("v", "2.0");
+                params.put("platform", 2);
                 params.put("page_no", pageNo);
                 params.put("q", searchKey);
                 if (!"".equals(sort)) {
@@ -171,48 +174,35 @@ public class HttpRequestController {
         return getUrlByPlatform(params);
     }
 
-    public String generateUrlPathForActivity(JSONObject activityParams) {
-        JSONObject params = new JSONObject();
-        String urlPath = "";
+    public JSONArray getActivityList(String activityType, JSONArray jsonArray) {
         try {
-            if (activityParams.getString("activityType").equals("tb") || activityParams.getString("activityType").equals("ele")) {
-                params.put("format", "JSON");
-                params.put("sign_method", "md5");
-                params.put("app_key", TB_APP_KEY);
-                params.put("adzone_id", TB_PID_LAST);
-                params.put("timestamp", dateFormat.format(new Date())); // System.currentTimeMillis() + 28800000
-                params.put("method", "taobao.tbk.activity.info.get");
-                params.put("v", "2.0");
-                params.put("activity_material_id", activityParams.getString("activity_material_id"));
-                params.put("sign", encryptParams(params, TB_APP_SECRET));
-                urlPath = TB_URL + "?" + convertJsonToUrlParams(params);
-            }
-            if (activityParams.getString("activityType").equals("jd")) {
+            if (activityType.equals("jd")) {
+                JSONObject params = new JSONObject();
                 params.put("app_key", JD_APP_KEY);
                 params.put("method", "jd.union.open.activity.query");
                 params.put("format", "JSON");
                 params.put("timestamp", dateFormat.format(new Date()));
                 params.put("v", "1.0");
                 params.put("sign_method", "md5");
-                params.put("param_json", "{\"activityReq\": {\"poolId\":1,\"pageSize\":40,\"activeDate\":\"" + activeDateFormat.format(new Date()) + "\"}}"); //1：热门会场；2：热门榜单
+                params.put("param_json", "{\"activityReq\": {\"poolId\":1,\"pageSize\":40,\"activeDate\":\"" + activeDateFormat.format(new Date(System.currentTimeMillis() + 86400000)) + "\"}}"); //1：热门会场；2：热门榜单
                 params.put("sign", encryptParams(params, JD_APP_SECRET));
-                urlPath = JD_URL + "?" + convertJsonToUrlParams(params);
-            }
-            if (activityParams.getString("activityType").equals("pdd")) {
-                params.put("client_id", PDD_CLIENT_ID);
-                params.put("pid", PDD_PID);
-                params.put("data_type", "JSON");
-                params.put("generate_schema_url", true);
-                params.put("timestamp", Long.valueOf(System.currentTimeMillis() / 1000));
-                params.put("type", "pdd.ddk.resource.url.gen");
-                params.put("custom_parameters", PDD_custom_parameters);
-                params.put("sign", encryptParams(params, PDD_SECRET));
-                urlPath = PDD_URL + "?" + convertJsonToUrlParams(params);
+                String urlPath = JD_URL + "?" + convertJsonToUrlParams(params);
+                JSONObject result = httpRequestGet(urlPath);
+                result.getJSONObject("jd_union_open_activity_query_response");
+                JSONArray activityList = new JSONObject(result.getJSONObject("jd_union_open_activity_query_response").getString("result")).getJSONArray("data");
+                JSONObject jsonObject;
+                for (int i = 0; i < activityList.length(); i++) {
+                    jsonObject = new JSONObject();
+                    jsonObject.put("name", activityList.getJSONObject(i).getString("title"));
+                    jsonObject.put("img", activityList.getJSONObject(i).getJSONArray("imgList").getJSONObject(0).getString("imgUrl"));
+                    jsonObject.put("url", activityList.getJSONObject(i).getString("urlM"));
+                    jsonArray.put(jsonObject);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return urlPath;
+        return jsonArray;
     }
 
     public JSONObject generatePromotion(JSONObject queryParam, boolean isApp) {
@@ -335,43 +325,6 @@ public class HttpRequestController {
             e.printStackTrace();
         }
         return goodDetail;
-    }
-
-    public List<HashMap<String, Object>> parseActivityList(String urlPath, String activityType) {
-        List<HashMap<String, Object>> arrayList = new ArrayList<>();
-        try {
-            if (activityType.equals("tb")) {
-                HashMap<String, Object> hashMap = new HashMap<>();
-                hashMap.put("title", "天猫国际大额优惠券每天抢");
-                hashMap.put("img", "https://gw.alicdn.com/imgextra/i4/O1CN01FpO0Di1oJTrNqndoB_!!6000000005204-0-tps-800-450.jpg");
-                hashMap.put("urlPath", "https://s.click.taobao.com/xZA9VMu");
-                arrayList.add(hashMap);
-                return arrayList;
-            }
-            if (activityType.equals("ele")) {
-                HashMap<String, Object> hashMap = new HashMap<>();
-                hashMap.put("title", "每日领饿了么餐饮红包");
-                hashMap.put("img", "https://gw.alicdn.com/tfs/TB16Sf834v1gK0jSZFFXXb0sXXa-640-361.jpg");
-                hashMap.put("urlPath", "https://s.click.ele.me/t?union_lens=lensId%3APUB%401675492530%402106c9e3_09ae_1861b2318cb_04cd%4001%40eyJmbG9vcklkIjozODg1Miiwiic3BtQiiI6Il9wb3J0YWxfdjJfcGFnZXNfYWN0aXZpdHlfb2ZmaWNpYWxfaW5kZXhfaHRtIn0ie%3BeventPageId%3A20150318020004284&&e=-s028SDbeNZGGQPkQhMvfeEouAOePaqgQhhXkFL3EiuDF9OHXmijtrjwOFwnGlB6EdaXNZp06SFXCWuIc7eWhCraUyV3XmEBfkj7Ea8TcbQhe6JnGlMwe08CBkmXeLLriL5EfJWof5EwsYEBPy74GppkTPpoKeE8t0hfDj6cDqdktms2OA86t6G5v0IIOvIZMpR9SOHhclm7L0J9F9BBznntuiSsUF52JmU1Kuo2h4ptjNm4c5BXF5mudpjpnCoRtbeds0IveB0zIlamhkXJtyFKHedyUzUrq0VNhVBjW1AafYFh2TSOIQTPJYrbtmKZd8KWHotG7aBJ3drtXVWUlp9oozmcHlvt1l1SaQgSTHnhYRRK8K21vwj3qAhZb51kE8raAzGNgkzmZnqB5Ag6Ls1J1Xtv2yAwRXZkdbjXA9u0ccpUiZNuS7krlFNIckjkig5WABlfbYwhbQ7EIeqrnPl2VjN7A&");
-                arrayList.add(hashMap);
-                hashMap = new HashMap<>();
-                hashMap.put("title", "在家逛超市 每日抢限量爆款");
-                hashMap.put("img", "https://gw.alicdn.com/tfs/TB1RJGpq6MZ7e4jSZFOXXX7epXa-800-450.jpg");
-                hashMap.put("urlPath", "https://s.click.ele.me/yE69VMu");
-                arrayList.add(hashMap);
-                return arrayList;
-            }
-            JSONObject result = httpRequestGet(urlPath);
-            if (activityType.equals("jd")) {
-                arrayList = parseJdActivityList(result);
-            }
-            if (activityType.equals("pdd")) {
-                arrayList = parsePddActivityList(result);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return arrayList;
     }
 
     public JSONObject httpRequestGet(String urlPath) {
@@ -508,44 +461,6 @@ public class HttpRequestController {
             goodObj.getJSONObject("jd_union_open_goods_jingfen_query_response");
             JSONArray goodsList = new JSONObject(goodObj.getJSONObject("jd_union_open_goods_jingfen_query_response").getString("result")).getJSONArray("data");
             arrayList = getJdGoodList(goodsList);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return arrayList;
-    }
-
-    public List<HashMap<String, Object>> parseJdActivityList(JSONObject activityObj) {
-        List<HashMap<String, Object>> arrayList = new ArrayList<>();
-        try {
-            activityObj.getJSONObject("jd_union_open_activity_query_response");
-            JSONArray jsonArray = new JSONObject(activityObj.getJSONObject("jd_union_open_activity_query_response").getString("result")).getJSONArray("data");
-            HashMap<String, Object> hashMap;
-            for (int i=0; i<jsonArray.length(); i++) {
-                hashMap = new HashMap<>();
-                hashMap.put("title", jsonArray.getJSONObject(i).getString("title"));
-                hashMap.put("img", jsonArray.getJSONObject(i).getJSONArray("imgList").getJSONObject(0).getString("imgUrl"));
-                hashMap.put("urlPath", jsonArray.getJSONObject(i).getString("urlM"));
-                arrayList.add(hashMap);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return arrayList;
-    }
-
-    public List<HashMap<String, Object>> parsePddActivityList(JSONObject activityObj) {
-        List<HashMap<String, Object>> arrayList = new ArrayList<>();
-        try {
-            activityObj.getJSONObject("resource_url_response");
-            JSONArray jsonArray = activityObj.getJSONObject("resource_url_response").getJSONArray("data");
-            HashMap<String, Object> hashMap;
-            for (int i=0; i<jsonArray.length(); i++) {
-                hashMap = new HashMap<>();
-                hashMap.put("title", jsonArray.getJSONObject(i).getString("title"));
-                hashMap.put("img", jsonArray.getJSONObject(i).getJSONArray("imgList").getJSONObject(0).getString("imgUrl"));
-                hashMap.put("url", jsonArray.getJSONObject(i).getString("urlM"));
-                arrayList.add(hashMap);
-            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -739,35 +654,13 @@ public class HttpRequestController {
         return bigDecimal.stripTrailingZeros().toPlainString();
     }
 
-    public void downloadFileToLocal(File filePath, String urlPath) {
-        OutputStream outputStream = null;
-        HttpsURLConnection conn = null;
+    public void downloadFileToLocal(File filePath, String[] urlPath, int index) {
         try {
-            URL url = new URL(urlPath);
-            conn = (HttpsURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setConnectTimeout(9000);
-            conn.setDoInput(true);
-            conn.setDoOutput(true);
-            InputStream inputStream = conn.getInputStream();
-            outputStream = Files.newOutputStream(filePath.toPath());
-            byte[] buffer = new byte[1024];
-            while (inputStream.read(buffer) != -1) {
-                outputStream.write(buffer);
-            }
-            outputStream.flush();
+            writeStringToLocal(filePath, fromUrlToJson(urlPath, index).toString());
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
-            }
-            try {
-                if (outputStream != null) {
-                    outputStream.close();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+            if (index == 0) {
+                downloadFileToLocal(filePath, urlPath, 1);
             }
         }
     }
@@ -802,6 +695,8 @@ public class HttpRequestController {
                 stringBuilder.append(line);
             }
             result = new JSONObject(stringBuilder.toString());
+            bufferedReader = null;
+            stringBuilder = null;
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -816,16 +711,12 @@ public class HttpRequestController {
         return result;
     }
 
-    public JSONObject fromUrlToJson(String urlPath) {
+    public JSONObject fromUrlToJson(String[] urlPath, int index) {
         JSONObject result = new JSONObject();
         HttpsURLConnection conn = null;
         try {
-            URL url = new URL(urlPath);
+            URL url = new URL(urlPath[index]);
             conn = (HttpsURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setConnectTimeout(9000);
-            conn.setDoInput(true);
-            conn.setDoOutput(true);
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
             String line;
             StringBuilder stringBuilder = new StringBuilder();
@@ -833,8 +724,13 @@ public class HttpRequestController {
                 stringBuilder.append(line);
             }
             result = new JSONObject(stringBuilder.toString());
+            bufferedReader = null;
+            stringBuilder = null;
         } catch (Exception e) {
             e.printStackTrace();
+            if (index == 0) {
+                return fromUrlToJson(urlPath, 1);
+            }
         } finally {
             if (conn != null) {
                 conn.disconnect();
@@ -850,16 +746,16 @@ public class HttpRequestController {
             File activityFile = new File(picPath + "/activity.txt");
             if (!activityFile.exists()) {
                 activityFile.createNewFile();
-                downloadFileToLocal(activityFile, ACTIVITY_URL);
+                downloadFileToLocal(activityFile, ACTIVITY_URL, 0);
             }
             if (!versionFile.exists()) {
                 versionFile.createNewFile();
-                downloadFileToLocal(versionFile, VERSION_URL);
+                downloadFileToLocal(versionFile, VERSION_URL, 0);
             } else {
-                JSONObject remoteJson = fromUrlToJson(VERSION_URL);
+                JSONObject remoteJson = fromUrlToJson(VERSION_URL, 0);
                 JSONObject localJson = readFileFromLocal(versionFile);
                 if (remoteJson.getInt("activity") > localJson.getInt("activity")) {
-                    downloadFileToLocal(activityFile, ACTIVITY_URL);
+                    downloadFileToLocal(activityFile, ACTIVITY_URL, 0);
                     writeStringToLocal(versionFile, remoteJson.toString());
                 }
                 flag = remoteJson.getInt("app");

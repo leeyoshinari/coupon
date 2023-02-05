@@ -39,12 +39,26 @@
                                 android:maxLines="1"
                                 android:imeOptions="actionSearch"
                                 android:background="@drawable/edit_text_style"/>
+                        <ImageView
+                                android:id="@+id/edit_clear"
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@mipmap/close"
+                                android:layout_alignParentEnd="true"
+                                android:layout_centerInParent="true"
+                                android:layout_marginStart="-20dp"
+                                android:layout_gravity="center"
+                                android:alpha="0.6"/>
                         <Button
                                 android:id="@+id/search_button"
                                 android:layout_height="40dp"
-                                android:layout_width="60dp"
+                                android:layout_width="wrap_content"
+                                android:minWidth="0dp"
+                                android:paddingStart="10dp"
+                                android:paddingEnd="10dp"
                                 android:text="@string/search_button_text"
-                                android:layout_marginStart="10dp"/>
+                                android:layout_marginStart="10dp"
+                                app:layout_constraintStart_toStartOf="@id/key_word"/>
                 </androidx.appcompat.widget.LinearLayoutCompat>
 
                 <androidx.appcompat.widget.LinearLayoutCompat
@@ -97,37 +111,52 @@
                         android:orientation="horizontal"
                         android:paddingTop="10dp"
                         android:paddingBottom="10dp"
+                        android:background="@color/purple_700"
+                        android:visibility="visible"
                         app:layout_constraintTop_toTopOf="@id/linear_layout_all"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
                         tools:ignore="RtlSymmetry">
                         <TextView
-                                android:id="@+id/activity_elem"
-                                android:layout_height="wrap_content"
-                                android:layout_width="wrap_content"
-                                android:textSize="16sp"
-                                android:text="@string/activity_elem"
-                                android:layout_marginStart="20dp"/>
-                        <TextView
                                 android:id="@+id/activity_tb"
                                 android:layout_height="wrap_content"
                                 android:layout_width="wrap_content"
                                 android:textSize="16sp"
-                                android:text="@string/tb_text"
+                                android:textStyle="bold"
+                                android:text="@string/tb_text_s"
                                 android:layout_marginStart="20dp"/>
                         <TextView
                                 android:id="@+id/activity_jd"
                                 android:layout_height="wrap_content"
                                 android:layout_width="wrap_content"
                                 android:textSize="16sp"
-                                android:text="@string/jd_text"
+                                android:textStyle="bold"
+                                android:text="@string/jd_text_s"
                                 android:layout_marginStart="20dp"/>
                         <TextView
                                 android:id="@+id/activity_pdd"
                                 android:layout_height="wrap_content"
                                 android:layout_width="wrap_content"
                                 android:textSize="16sp"
+                                android:textStyle="bold"
                                 android:text="@string/pdd_text"
+                                android:layout_marginStart="20dp"/>
+                        <TextView
+                                android:id="@+id/activity_elem"
+                                android:layout_height="wrap_content"
+                                android:layout_width="wrap_content"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:text="@string/activity_elem"
+                                android:layout_marginStart="20dp"/>
+                        <TextView
+                                android:id="@+id/activity_mt"
+                                android:layout_height="wrap_content"
+                                android:layout_width="wrap_content"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:visibility="gone"
+                                android:text="@string/mt_text"
                                 android:layout_marginStart="20dp"/>
                 </androidx.appcompat.widget.LinearLayoutCompat>
 
