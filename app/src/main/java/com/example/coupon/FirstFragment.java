@@ -435,16 +435,17 @@ public class FirstFragment extends Fragment {
             });
 
             listView.setOnScrollListener(new AbsListView.OnScrollListener() {
+                int lastItemIndex = 0;
                 @Override
                 public void onScrollStateChanged(AbsListView absListView, int i) {
-                    if (i == 0 && absListView.getLastVisiblePosition() == absListView.getCount() - 1) {
+                    if (i == AbsListView.OnScrollListener.SCROLL_STATE_IDLE && lastItemIndex == absListView.getCount() - 1) {
                         runShowGoodList();
                     }
                 }
 
                 @Override
                 public void onScroll(AbsListView absListView, int i, int i1, int i2) {
-
+                    lastItemIndex = i + i1 -1;
                 }
             });
         } else {

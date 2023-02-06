@@ -36,7 +36,7 @@ public class CustomLoadingDialog extends Dialog {
         ivLoading.startAnimation(hyperspaceJumpAnimation);
 
         getWindow().getAttributes().gravity = Gravity.CENTER;
-        getWindow().getAttributes().dimAmount = 0.2f;//背景透明度  取值范围 0 ~ 1
+        getWindow().getAttributes().dimAmount = 0.5f;//背景透明度  取值范围 0 ~ 1
     }
 
     @Override
