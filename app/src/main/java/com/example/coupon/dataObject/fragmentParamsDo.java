@@ -1,9 +1,5 @@
 package com.example.coupon.dataObject;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-
 public class fragmentParamsDo {
     private int widthPixel = 0;
 

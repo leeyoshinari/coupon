@@ -46,6 +46,7 @@ public class FirstFragment extends Fragment {
     private CustomLoadingDialog customLoadingDialog;
     private ImageLoader imageLoader;
     private ListView listView;
+    private int listViewLength = 19;    // 默认pageSize是20
     private MyAdapter myAdapter;
     private ActivityAdapter activityAdapter;
     private File activityPath;
@@ -135,20 +136,28 @@ public class FirstFragment extends Fragment {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                if (getAppVersion() < httpRequestController.updateVersion(picPath)) {
-                    Message message = new Message();
-                    message.what = 0;
-                    message.obj = "检测到有新本版发布，即将跳转到浏览器下载最新版本";
-                    handler.sendMessage(message);
-                    try {
+                try {
+                    JSONObject result = httpRequestController.updateVersion(picPath);
+                    if (getAppVersion() < result.getInt("appVersion")) {
+                        Message message = new Message();
+                        message.what = 0;
+                        message.obj = "检测到有新本版发布，即将跳转到浏览器下载最新版本";
+                        handler.sendMessage(message);
                         Thread.sleep(5000L);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        Intent intent = new Intent();
+                        intent.setAction("android.intent.action.VIEW");
+                        intent.setData(Uri.parse(APP_URL));
+                        startActivity(intent);
                     }
-                    Intent intent = new Intent();
-                    intent.setAction("android.intent.action.VIEW");
-                    intent.setData(Uri.parse(APP_URL));
-                    startActivity(intent);
+                    if (result.getBoolean("money")) {
+                        Thread.sleep(5000L);    // 等待app完全加载完成
+                        Message message = new Message();
+                        message.what = 0;
+                        message.obj = "活动页面有" + result.getString("text") + "红包哟，快去领取吧";
+                        handler.sendMessage(message);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
         }).start();
@@ -387,21 +396,19 @@ public class FirstFragment extends Fragment {
 
     public void onShowGoodList() {
         String keyWord = binding.keyWord.getText().toString().trim();
-        String url = "";
         if (keyWord.equals("")) {
             handler.sendEmptyMessage(1);
-            url = httpRequestController.generateUrlPathForRecommend(fp.getPageNo());
         } else {
             handler.sendEmptyMessage(2);
-            url = httpRequestController.generateUrlPathForList(keyWord, fp.getSort(), fp.getSortType(), fp.getHasCoupon(), fp.getPageNo());
         }
-        List<HashMap<String, Object>> result = httpRequestController.parseGoodList(url, keyWord);
+        List<HashMap<String, Object>> result = httpRequestController.parseGoodList(keyWord, fp.getSort(), fp.getSortType(), fp.getHasCoupon(), fp.getPageNo(), true);
         if (result.size() > 0) {
             fp.setPageNo(fp.getPageNo() + 1);
             listView.post(new Runnable() {
                 @Override
                 public void run() {
                     arrayList.addAll(result);
+                    listViewLength = arrayList.size() - 1;
                     if (myAdapter != null) {
                         myAdapter.notifyDataSetChanged();
                     } else {
@@ -435,14 +442,13 @@ public class FirstFragment extends Fragment {
             });
 
             listView.setOnScrollListener(new AbsListView.OnScrollListener() {
-                int lastItemIndex = 0;
+                int lastItemIndex = -1;
                 @Override
                 public void onScrollStateChanged(AbsListView absListView, int i) {
-                    if (i == AbsListView.OnScrollListener.SCROLL_STATE_IDLE && lastItemIndex == absListView.getCount() - 1) {
+                    if (i == AbsListView.OnScrollListener.SCROLL_STATE_IDLE && lastItemIndex == listViewLength) { // absListView.getCount() - 1
                         runShowGoodList();
                     }
                 }
-
                 @Override
                 public void onScroll(AbsListView absListView, int i, int i1, int i2) {
                     lastItemIndex = i + i1 -1;
@@ -629,6 +635,7 @@ public class FirstFragment extends Fragment {
         myAdapter = null;
         activityAdapter = null;
         listView.setAdapter(null);
+        listViewLength = 19;
         binding.keyWord.clearFocus();
         fp.setPageNo(1);
         if (isAll) {
@@ -743,6 +750,7 @@ public class FirstFragment extends Fragment {
                         }
                     };
                     listView.setOnItemClickListener(onItemClickListener);
+                    listView.setOnItemLongClickListener(onItemLongClickListener);
                 }
             });
             listView.setOnScrollListener(new AbsListView.OnScrollListener() {

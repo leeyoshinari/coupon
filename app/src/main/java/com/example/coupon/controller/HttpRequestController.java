@@ -276,11 +276,11 @@ public class HttpRequestController {
         }
     }
 
-    public List<HashMap<String, Object>> parseGoodList(String urlPath, String keyWord) {
+    public List<HashMap<String, Object>> parseGoodList(String searchKey, String sort, String sortType, Boolean hasCoupon, int pageNo, Boolean flag) {
         List<HashMap<String, Object>> arrayList = new ArrayList<>();
         try {
-            JSONObject result = httpRequestGet(urlPath);
-            if ("".equals(keyWord)) {
+            if ("".equals(searchKey)) {
+                JSONObject result = httpRequestGet(generateUrlPathForRecommend(pageNo));
                 if (getPlatform().equals("tb")) {
                     arrayList = parseTbGoodListOfRecommend(result);
                 }
@@ -291,8 +291,13 @@ public class HttpRequestController {
                     arrayList = parsePddGoodListOfRecommend(result);
                 }
             } else {
+                JSONObject result = httpRequestGet(generateUrlPathForList(searchKey, sort, sortType, hasCoupon, pageNo));
                 if (getPlatform().equals("tb")) {
                     arrayList = parseTbGoodList(result);
+                    if (pageNo == 1 && arrayList.size() == 1 && flag) {
+                        String shop = Objects.requireNonNull(arrayList.get(0).get("shop")).toString();
+                        arrayList = parseGoodList(shop, sort, sortType, hasCoupon, pageNo, false);
+                    }
                 }
                 if (getPlatform().equals("jd")) {
                     arrayList = parseJdGoodList(result);
@@ -728,7 +733,7 @@ public class HttpRequestController {
         } catch (Exception e) {
             e.printStackTrace();
             if (index == 0) {
-                return fromUrlToJson(urlPath, 1);
+                result = fromUrlToJson(urlPath, 1);
             }
         } finally {
             if (conn != null) {
@@ -738,8 +743,8 @@ public class HttpRequestController {
         return result;
     }
 
-    public int updateVersion(File picPath) {
-        int flag = -1;
+    public JSONObject updateVersion(File picPath) {
+        JSONObject result = new JSONObject();
         try {
             File versionFile = new File(picPath + "/version.txt");
             File activityFile = new File(picPath + "/activity.txt");
@@ -757,11 +762,13 @@ public class HttpRequestController {
                     downloadFileToLocal(activityFile, ACTIVITY_URL, 0);
                     writeStringToLocal(versionFile, remoteJson.toString());
                 }
-                flag = remoteJson.getInt("app");
+                result.put("appVersion", remoteJson.getInt("app"));
+                result.put("money", remoteJson.getBoolean("m"));
+                result.put("text", remoteJson.getString("d"));
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return flag;
+        return result;
     }
 }
