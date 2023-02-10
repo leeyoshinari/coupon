@@ -51,6 +51,7 @@ public class FirstFragment extends Fragment {
     private ActivityAdapter activityAdapter;
     private File activityPath;
     private List<HashMap<String, Object>> arrayList = new ArrayList<>();
+    private Toast mToast = null;
 
     private final Handler handler = new Handler(Looper.getMainLooper()) {
         @Override
@@ -58,9 +59,14 @@ public class FirstFragment extends Fragment {
             super.handleMessage(msg);
             switch (msg.what) {
                 case 0:
-                    Toast toast = Toast.makeText(requireContext().getApplicationContext(), msg.obj.toString(), Toast.LENGTH_LONG);
-                    toast.setGravity(Gravity.CENTER, 0, 0);
-                    toast.show();
+                    if (mToast == null) {
+                        mToast = Toast.makeText(requireContext().getApplicationContext(), msg.obj.toString(), Toast.LENGTH_LONG);
+                        mToast.setGravity(Gravity.CENTER, 0, 0);
+                    } else {
+                        mToast.setText(msg.obj.toString());
+                        mToast.setDuration(Toast.LENGTH_LONG);
+                    }
+                    mToast.show();
                     break;
                 case 1:
                     binding.linearLayoutSort.setVisibility(View.GONE); // 排序布局隐藏
@@ -79,6 +85,10 @@ public class FirstFragment extends Fragment {
                     break;
                 case 6:
                     binding.linearLayoutActivity.setVisibility(View.VISIBLE);  //活动布局显示
+                    break;
+                case 10:
+                    View objView = (View) msg.obj;
+                    objView.setVisibility(View.VISIBLE);
                     break;
             }
         }
@@ -108,7 +118,7 @@ public class FirstFragment extends Fragment {
         if (!picPath.exists()) {
             picPath.mkdirs();
         }
-        activityPath = new File(picPath + "/activity.txt");
+        activityPath = new File(picPath + "/activity9.txt");
         // 初始化 imageloader
         ImageLoaderConfiguration configuration = new ImageLoaderConfiguration.Builder(requireContext())
                 .memoryCacheExtraOptions(300, 300)
@@ -128,10 +138,6 @@ public class FirstFragment extends Fragment {
 
         this.listView = binding.goodListView;
 
-        // 检查读写权限
-        // if (checkPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.MANAGE_EXTERNAL_STORAGE})) {
-        //     return;
-        // }
         // 检查版本，如果需要升级，则打开浏览器下载最新版本
         new Thread(new Runnable() {
             @Override
@@ -170,7 +176,7 @@ public class FirstFragment extends Fragment {
         param = binding.searchButton.getLayoutParams();
         param.width = (int) (fp.getWidthPixel() * 0.18);
         binding.searchButton.setLayoutParams(param);
-        int marginStartSize = (int) ((fp.getWidthPixel()/fp.getDensity() - 36 * 4) / 5 * fp.getDensity());
+        int marginStartSize = (int) ((fp.getWidthPixel()/fp.getDensity() - 38 * 4) / 5 * fp.getDensity());
         ViewGroup.MarginLayoutParams paramMargin = (ViewGroup.MarginLayoutParams) binding.tb.getLayoutParams();
         paramMargin.setMarginStart(marginStartSize);
         binding.tb.setLayoutParams(paramMargin);
@@ -376,6 +382,14 @@ public class FirstFragment extends Fragment {
                 runShowActivity();
             }
         });
+        binding.activityDc.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                fp.setActivityType("dc");
+                clickActivityChangeColor(R.id.activity_dc);
+                runShowActivity();
+            }
+        });
         handler.sendEmptyMessage(1);
         handler.sendEmptyMessage(5);
         runShowGoodList();
@@ -463,6 +477,7 @@ public class FirstFragment extends Fragment {
     }
 
     public void getScreenSizeDp() {
+//        DisplayMetrics dm = getResources().getDisplayMetrics();
         WindowManager wm = (WindowManager) this.requireContext().getSystemService(Context.WINDOW_SERVICE);
         DisplayMetrics dm = new DisplayMetrics();
         wm.getDefaultDisplay().getMetrics(dm);
@@ -557,8 +572,11 @@ public class FirstFragment extends Fragment {
     }
 
     public String getPkgName(String platform){
-        String pkgName = "com.taobao.taobao";
+        String pkgName;
         switch (platform) {
+            case "tb":
+                pkgName = "com.taobao.taobao";
+                break;
             case "jd":
                 pkgName = "com.jingdong.app.mall";
                 break;
@@ -576,6 +594,18 @@ public class FirstFragment extends Fragment {
                 break;
             case "wechat":
                 pkgName = "com.tencent.mm";
+                break;
+            case "gd":
+                pkgName = "com.autonavi.minimap";
+                break;
+            case "mt":
+                pkgName = "com.sankuai.meituan";
+                break;
+            case "mtwm":
+                pkgName = "com.sankuai.meituan.takeoutnew";
+                break;
+            default:
+                pkgName = "default123";
                 break;
         }
         return pkgName;
@@ -661,7 +691,7 @@ public class FirstFragment extends Fragment {
     }
 
     public void clickActivityChangeColor(int textId) {
-        int[] textIds = {R.id.activity_elem, R.id.activity_tb, R.id.activity_pdd, R.id.activity_jd, R.id.activity_mt};
+        int[] textIds = {R.id.activity_elem, R.id.activity_tb, R.id.activity_pdd, R.id.activity_jd, R.id.activity_mt, R.id.activity_dc};
         TextView textView;
         for (int i:textIds) {
             textView = requireView().findViewById(i);
@@ -724,6 +754,21 @@ public class FirstFragment extends Fragment {
     public void showActivity() {
         try {
             JSONObject localFile = httpRequestController.readFileFromLocal(activityPath);
+            Iterator<String> keys = localFile.keys();
+            Message message = new Message();
+            message.what = 10;
+            while (keys.hasNext()) {
+                switch (keys.next()) {
+                    case "mt":
+                        message.obj = binding.activityMt;
+                        handler.sendMessage(message);
+                        break;
+                    case "dc":
+                        message.obj = binding.activityDc;
+                        handler.sendMessage(message);
+                        break;
+                }
+            }
             JSONArray result = localFile.getJSONObject(fp.getActivityType()).getJSONArray("coupon");
             JSONArray jsonArray = httpRequestController.getActivityList(fp.getActivityType(), result);
             localFile = null;
@@ -746,7 +791,24 @@ public class FirstFragment extends Fragment {
                     AdapterView.OnItemLongClickListener onItemLongClickListener = new AdapterView.OnItemLongClickListener() {
                         @Override
                         public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
-                            return false;
+                            try {
+                                JSONObject itemObject = jsonArray.getJSONObject(i);
+                                if (itemObject.has("isMinApp") && itemObject.getBoolean("isMinApp")) {
+                                    ClipboardManager clipboardManager = (ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
+                                    ClipData clipData = ClipData.newPlainText(null, "领券实惠购");
+                                    clipboardManager.setPrimaryClip(clipData);
+                                    Message msg = new Message();
+                                    msg.what = 0;
+                                    msg.obj = "微信小程序名称已复制，请去微信搜一搜小程序领取红包吧~";
+                                    handler.sendMessage(msg);
+                                    return true;
+                                } else {
+                                    return false;
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                return false;
+                            }
                         }
                     };
                     listView.setOnItemClickListener(onItemClickListener);
@@ -802,19 +864,6 @@ public class FirstFragment extends Fragment {
             }
         } catch (Exception e) {
             e.printStackTrace();
-        }
-    }
-
-    public Boolean checkPermissions(String[] permissions) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager()) {
-            return false;
-        } else {
-            Message message = new Message();
-            message.what = 0;
-            message.obj = "权限不足";
-            handler.sendMessage(message);
-            ActivityCompat.requestPermissions(requireActivity(), permissions, 1024);
-            return true;
         }
     }
 
