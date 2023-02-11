@@ -60,8 +60,10 @@ public class ActivityAdapter extends BaseAdapter {
             JSONObject item = data.getJSONObject(position);
             holder.activity_title.setText(Objects.requireNonNull(item.getString("name")));
             imageLoader.displayImage(Objects.requireNonNull(item.getString("img")), holder.activity_img);
+            holder.activity_title.setMaxLines(1);
         } catch (Exception e) {
             e.printStackTrace();
+            holder.activity_title.setMaxLines(5);
         }
         return convertView;
     }

@@ -30,31 +30,30 @@ public class CustomLinearLayout extends LinearLayout {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         final int count = getChildCount();
+        int minHeight = 999;
         int measureHeight = 0;
         int lastRight = 0;
-        int tempHeight = 0;
         for (int i = 0; i < count; i++) {
             final View child = getChildAt(i);
             if (child.getVisibility() != GONE) {
                 final LayoutParams layoutParams = (LayoutParams) child.getLayoutParams();
-                int childLong = lastRight + layoutParams.getMarginStart() + child.getMeasuredWidth() + layoutParams.getMarginEnd();
+                int childLong = lastRight + layoutParams.getMarginStart() + getViewWidth(child) + layoutParams.getMarginEnd();
                 if (childLong > getMeasuredWidth()) {
-                    measureHeight = measureHeight + tempHeight;
-                    tempHeight = 0;
+                    measureHeight = measureHeight + minHeight + getPaddingBottom();
                     lastRight = layoutParams.getMarginStart() + child.getMeasuredWidth() + layoutParams.getMarginEnd();
                     int compareHeight = layoutParams.topMargin + child.getMeasuredHeight() + layoutParams.bottomMargin;
-                    tempHeight = Math.max(compareHeight, tempHeight);
+                    minHeight = Math.min(minHeight, compareHeight);
                 } else {
                     int compareHeight = layoutParams.topMargin + child.getMeasuredHeight() + layoutParams.bottomMargin;
-                    tempHeight = Math.max(compareHeight, tempHeight);
+                    minHeight = Math.min(minHeight, compareHeight);
                     lastRight = lastRight + layoutParams.getMarginStart() + child.getMeasuredWidth() + layoutParams.getMarginEnd();
                 }
             }
         }
         if (measureHeight != 0) {
-            measureHeight += tempHeight / 2;
+            measureHeight += minHeight + getPaddingBottom() + getPaddingTop();
         } else {
-            measureHeight += tempHeight * 2;
+            measureHeight += minHeight + getPaddingBottom() + getPaddingTop();
         }
         setMeasuredDimension(getMeasuredWidth(), measureHeight);
     }
@@ -63,9 +62,8 @@ public class CustomLinearLayout extends LinearLayout {
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         final int count = getChildCount();
         int lastRight = 0;
-        int top = 0;
         int lastBottom = getPaddingTop();
-        int left, right, bottom;
+        int left, top, right, bottom;
         int tempHeight = 0;
         for (int i = 0; i < count; i++) {
             final View child = getChildAt(i);
@@ -73,7 +71,7 @@ public class CustomLinearLayout extends LinearLayout {
                 final LayoutParams layoutParams = (LayoutParams) child.getLayoutParams();
                 int childLong = lastRight + layoutParams.getMarginStart() + getViewWidth(child) + layoutParams.getMarginEnd();
                 if (childLong > getMeasuredWidth()) {
-                    lastBottom = lastBottom + tempHeight;
+                    lastBottom = lastBottom + tempHeight + getPaddingBottom();
                     tempHeight = 0;
                     left = layoutParams.getMarginStart();
                     top = lastBottom + layoutParams.topMargin;

@@ -747,7 +747,7 @@ public class HttpRequestController {
         JSONObject result = new JSONObject();
         try {
             File versionFile = new File(picPath + "/version.txt");
-            File activityFile = new File(picPath + "/activity.txt");
+            File activityFile = new File(picPath + "/activity12.txt");
             if (!activityFile.exists()) {
                 activityFile.createNewFile();
                 downloadFileToLocal(activityFile, ACTIVITY_URL, 0);

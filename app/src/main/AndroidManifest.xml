@@ -41,7 +41,8 @@
         <package android:name="com.xunmeng.pinduoduo"/>
         <package android:name="com.eg.android.AlipayGphone"/>
         <package android:name="com.tencent.mm"/>
-        <package android:name="me.ele"/>
+        <package android:name="com.sankuai.meituan"/>
+        <package android:name="com.sankuai.meituan.takeoutnew"/>
     </queries>
 
 </manifest>

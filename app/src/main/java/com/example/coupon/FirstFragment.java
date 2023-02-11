@@ -15,7 +15,6 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.*;
 import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 import com.example.coupon.adapter.ActivityAdapter;
 import com.example.coupon.animation.CustomLoadingDialog;
@@ -118,7 +117,7 @@ public class FirstFragment extends Fragment {
         if (!picPath.exists()) {
             picPath.mkdirs();
         }
-        activityPath = new File(picPath + "/activity.txt");
+        activityPath = new File(picPath + "/activity12.txt");
         // 初始化 imageloader
         ImageLoaderConfiguration configuration = new ImageLoaderConfiguration.Builder(requireContext())
                 .memoryCacheExtraOptions(300, 300)
@@ -575,6 +574,7 @@ public class FirstFragment extends Fragment {
         String pkgName;
         switch (platform) {
             case "tb":
+            case "ele":
                 pkgName = "com.taobao.taobao";
                 break;
             case "jd":
@@ -586,9 +586,9 @@ public class FirstFragment extends Fragment {
             case "wm":
                 pkgName = "com.xunmng.pindduo";
                 break;
-            case "ele":
-                pkgName = "me.ele";
-                break;
+//            case "ele":
+//                 pkgName = "me.ele";
+//                break;
             case "alipay":
                 pkgName = "com.eg.android.AlipayGphone";
                 break;
@@ -754,21 +754,6 @@ public class FirstFragment extends Fragment {
     public void showActivity() {
         try {
             JSONObject localFile = httpRequestController.readFileFromLocal(activityPath);
-            Iterator<String> keys = localFile.keys();
-            Message message = new Message();
-            message.what = 10;
-            while (keys.hasNext()) {
-                switch (keys.next()) {
-                    case "mt":
-                        message.obj = binding.activityMt;
-                        handler.sendMessage(message);
-                        break;
-                    case "dc":
-                        message.obj = binding.activityDc;
-                        handler.sendMessage(message);
-                        break;
-                }
-            }
             JSONArray result = localFile.getJSONObject(fp.getActivityType()).getJSONArray("coupon");
             JSONArray jsonArray = httpRequestController.getActivityList(fp.getActivityType(), result);
             localFile = null;
@@ -782,7 +767,17 @@ public class FirstFragment extends Fragment {
                         public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                             try {
                                 JSONObject itemObject = jsonArray.getJSONObject(i);
-                                jumpToActivityPage(itemObject);
+                                if (itemObject.has("url")) {
+                                    jumpToActivityPage(itemObject);
+                                } else {
+                                    ClipboardManager clipboardManager = (ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
+                                    ClipData clipData = ClipData.newPlainText(null, "ileeyoshinari");
+                                    clipboardManager.setPrimaryClip(clipData);
+                                    Message msg = new Message();
+                                    msg.what = 0;
+                                    msg.obj = "微信公众号名称已复制，请去微信搜索ileeyoshinari公众号领取红包吧~";
+                                    handler.sendMessage(msg);
+                                }
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
@@ -791,24 +786,7 @@ public class FirstFragment extends Fragment {
                     AdapterView.OnItemLongClickListener onItemLongClickListener = new AdapterView.OnItemLongClickListener() {
                         @Override
                         public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
-                            try {
-                                JSONObject itemObject = jsonArray.getJSONObject(i);
-                                if (itemObject.has("isMinApp") && itemObject.getBoolean("isMinApp")) {
-                                    ClipboardManager clipboardManager = (ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
-                                    ClipData clipData = ClipData.newPlainText(null, "领券实惠购");
-                                    clipboardManager.setPrimaryClip(clipData);
-                                    Message msg = new Message();
-                                    msg.what = 0;
-                                    msg.obj = "微信小程序名称已复制，请去微信搜一搜小程序领取红包吧~";
-                                    handler.sendMessage(msg);
-                                    return true;
-                                } else {
-                                    return false;
-                                }
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                return false;
-                            }
+                            return false;
                         }
                     };
                     listView.setOnItemClickListener(onItemClickListener);
@@ -834,10 +812,13 @@ public class FirstFragment extends Fragment {
             String urlPath = jsonObject.getString("url");
             if (isPkgInstalled(fp.getActivityType())) {
                 if (fp.getActivityType().equals("ele")) {
-                    urlPath = "eleme:" + urlPath.replace("https:", "");
+                    urlPath = "taobao:" + urlPath.replace("https:", "");
                 }
                 if (fp.getActivityType().equals("tb")) {
                     urlPath = "taobao:" + urlPath.replace("https:", "");
+                }
+                if (fp.getActivityType().equals("mt")) {
+                    urlPath = "imeituan://www.meituan.com/web?url=" + urlPath;
                 }
                 if (fp.getActivityType().equals("jd")) {
                     String path = "{\"category\":\"jump\",\"des\":\"m\",\"url\":\"" + urlPath + "\"}";
