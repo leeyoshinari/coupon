@@ -117,7 +117,7 @@ public class FirstFragment extends Fragment {
         if (!picPath.exists()) {
             picPath.mkdirs();
         }
-        activityPath = new File(picPath + "/activity12.txt");
+        activityPath = new File(picPath + "/activity.txt");
         // 初始化 imageloader
         ImageLoaderConfiguration configuration = new ImageLoaderConfiguration.Builder(requireContext())
                 .memoryCacheExtraOptions(300, 300)
