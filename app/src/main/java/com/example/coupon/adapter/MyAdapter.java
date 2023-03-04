@@ -40,7 +40,7 @@ public class MyAdapter extends BaseAdapter {
         return position;
     }
 
-    @SuppressLint("InflateParams")
+    @SuppressLint({"InflateParams", "SetTextI18n"})
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         ViewHolder holder = null;
