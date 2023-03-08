@@ -443,7 +443,7 @@ public class FirstFragment extends Fragment {
                                 clipboardManager.setPrimaryClip(clipData);
                                 Message message = new Message();
                                 message.what = 0;
-                                message.obj = "商品标题成功复制！";
+                                message.obj = "商品标题复制成功！";
                                 handler.sendMessage(message);
                                 return true;
                             }
@@ -556,10 +556,10 @@ public class FirstFragment extends Fragment {
                             clipboardManager.setPrimaryClip(clipData);
                         }
 
-                        Intent intent = new Intent();
-                        intent.setAction("android.intent.action.VIEW");
-                        intent.setData(Uri.parse(result.getString("urlPath")));
-                        startActivity(intent);
+//                        Intent intent = new Intent();
+//                        intent.setAction("android.intent.action.VIEW");
+//                        intent.setData(Uri.parse(result.getString("urlPath")));
+//                        startActivity(intent);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -794,7 +794,23 @@ public class FirstFragment extends Fragment {
                     AdapterView.OnItemLongClickListener onItemLongClickListener = new AdapterView.OnItemLongClickListener() {
                         @Override
                         public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
-                            return false;
+                            try {
+                                String urlPath = jsonArray.getJSONObject(i).getString("url");
+                                if (fp.getActivityType().equals("pdd")) {
+                                    urlPath = "https://mobile.yangkeduo.com" + urlPath;
+                                }
+                                ClipboardManager clipboardManager = (ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
+                                ClipData clipData = ClipData.newPlainText(null, urlPath);
+                                clipboardManager.setPrimaryClip(clipData);
+                                Message message = new Message();
+                                message.what = 0;
+                                message.obj = "链接复制成功！请去浏览器打开 ~ ";
+                                handler.sendMessage(message);
+                                return true;
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                return false;
+                            }
                         }
                     };
                     listView.setOnItemClickListener(onItemClickListener);
