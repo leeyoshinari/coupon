@@ -155,7 +155,7 @@ public class FirstFragment extends Fragment {
                         startActivity(intent);
                     }
                     if (result.getBoolean("money")) {
-                        Thread.sleep(5000L);    // 等待app完全加载完成
+                        Thread.sleep(2000L);
                         Message message = new Message();
                         message.what = 0;
                         message.obj = "活动页面有" + result.getString("text") + "红包哟，快去领取吧";
@@ -544,14 +544,22 @@ public class FirstFragment extends Fragment {
                     } else {
                         JSONObject result = generatePromotionUrl(hashMap, false);
                         customLoadingDialog.dismiss();
+
+                        if (httpRequestController.getPlatform().equals("jd")) {
+                            ClipboardManager clipboardManager = (ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
+                            ClipData clipData = ClipData.newPlainText(null, result.getString("urlPath"));
+                            clipboardManager.setPrimaryClip(clipData);
+                        }
+                        if (httpRequestController.getPlatform().equals("pdd")) {
+                            ClipboardManager clipboardManager = (ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
+                            ClipData clipData = ClipData.newPlainText(null, result.getString("path"));
+                            clipboardManager.setPrimaryClip(clipData);
+                        }
+
                         Intent intent = new Intent();
                         intent.setAction("android.intent.action.VIEW");
                         intent.setData(Uri.parse(result.getString("urlPath")));
                         startActivity(intent);
-                        //if (httpRequestController.getPlatform().equals("pdd")) {
-                        //    String appId = result.getString("appId");
-                        //    String pagePath = result.getString("path");
-                        //}
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -638,7 +646,7 @@ public class FirstFragment extends Fragment {
                     result.put("urlPath", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getString("schema_url"));
                 } else {
                     //result.put("appId", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getJSONObject("we_app_info").getString("app_id"));
-                    //result.put("path", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getJSONObject("we_app_info").getString("page_path"));
+                    result.put("path", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getJSONObject("we_app_info").getString("page_path"));
                     result.put("urlPath", generateResult.getJSONObject("goods_promotion_url_generate_response").getJSONArray("goods_promotion_url_list").getJSONObject(0).getString("url"));
                 }
             }

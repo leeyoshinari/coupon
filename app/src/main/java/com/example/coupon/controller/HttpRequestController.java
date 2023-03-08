@@ -567,7 +567,11 @@ public class HttpRequestController {
                     hashMap.put("final_price", convertByBigDecimal(String.format("%.2f", finalPrice)));
                     hashMap.put("brokerage", convertByBigDecimal(String.format("%.2f", goodsList.getJSONObject(i).getDouble("commission_rate") / rate * finalPrice)));
                 } else {
-                    hashMap.put("item_url", goodsList.getJSONObject(i).getString("url"));
+                    try {
+                        hashMap.put("item_url", goodsList.getJSONObject(i).getString("url"));
+                    } catch (JSONException e) {
+                        hashMap.put("item_url", goodsList.getJSONObject(i).getString("click_url"));
+                    }
                     hashMap.put("coupon_price", "");
                     hashMap.put("coupon_text", volumeText + "人已购买");
                     hashMap.put("sale_price", "");
