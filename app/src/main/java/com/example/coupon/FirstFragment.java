@@ -144,6 +144,7 @@ public class FirstFragment extends Fragment {
                 try {
                     JSONObject result = httpRequestController.updateVersion(picPath);
                     if (getAppVersion() < result.getInt("appVersion")) {
+                        Thread.sleep(1000L);
                         Message message = new Message();
                         message.what = 0;
                         message.obj = "检测到有新本版发布，即将跳转到浏览器下载最新版本";
@@ -155,7 +156,7 @@ public class FirstFragment extends Fragment {
                         startActivity(intent);
                     }
                     if (result.getBoolean("money")) {
-                        Thread.sleep(2000L);
+                        Thread.sleep(1000L);
                         Message message = new Message();
                         message.what = 0;
                         message.obj = "活动页面有" + result.getString("text") + "红包哟，快去领取吧";
