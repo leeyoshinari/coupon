@@ -131,6 +131,7 @@
                                 android:layout_width="wrap_content"
                                 android:textSize="16sp"
                                 android:textStyle="bold"
+                                android:visibility="gone"
                                 android:text="@string/jd_text_s"
                                 android:layout_marginStart="20dp"/>
                         <TextView
@@ -139,6 +140,7 @@
                                 android:layout_width="wrap_content"
                                 android:textSize="16sp"
                                 android:textStyle="bold"
+                                android:visibility="gone"
                                 android:text="@string/pdd_text"
                                 android:layout_marginStart="20dp"/>
                         <TextView
@@ -147,6 +149,7 @@
                                 android:layout_width="wrap_content"
                                 android:textSize="16sp"
                                 android:textStyle="bold"
+                                android:visibility="gone"
                                 android:text="@string/activity_elem"
                                 android:layout_marginStart="20dp"/>
                         <TextView
@@ -155,6 +158,7 @@
                                 android:layout_width="wrap_content"
                                 android:textSize="16sp"
                                 android:textStyle="bold"
+                                android:visibility="gone"
                                 android:text="@string/mt_text"
                                 android:layout_marginStart="20dp"/>
                         <TextView
@@ -163,6 +167,7 @@
                                 android:layout_width="wrap_content"
                                 android:textSize="16sp"
                                 android:textStyle="bold"
+                                android:visibility="gone"
                                 android:text="@string/dc_text"
                                 android:layout_marginStart="20dp"/>
                 </com.example.coupon.layout.CustomLinearLayout>

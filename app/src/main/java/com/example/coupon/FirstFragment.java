@@ -148,7 +148,7 @@ public class FirstFragment extends Fragment {
                         message.what = 0;
                         message.obj = "检测到有新本版发布，即将跳转到浏览器下载最新版本";
                         handler.sendMessage(message);
-                        Thread.sleep(5000L);
+                        Thread.sleep(2000L);
                         Intent intent = new Intent();
                         intent.setAction("android.intent.action.VIEW");
                         intent.setData(Uri.parse(APP_URL));
@@ -338,6 +338,7 @@ public class FirstFragment extends Fragment {
                 fp.setActivityType("tb");
                 clickActivityChangeColor(R.id.activity_tb);
                 initData(true);
+                showActivityButton();
                 runShowActivity();
             }
         });
@@ -490,43 +491,6 @@ public class FirstFragment extends Fragment {
         manager.hideSoftInputFromWindow(view.getWindowToken(), 0);
     }
 
-//    public void jumpToGoodDetailPage(HashMap<String, Object> hashMap) {
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                try {
-//                    Bundle bundle = new Bundle();
-//                    if (httpRequestController.getPlatform().equals("pdd")) {
-//                        String urlPath = httpRequestController.generateUrlPathForDetail(hashMap);
-//                        JSONObject goodDetail = httpRequestController.parseGoodDetail(urlPath);
-//                        hashMap.put("title_img", goodDetail.getJSONArray("title_img"));
-//                    }
-//                    if (httpRequestController.getPlatform().equals("jd")) {
-//                        String urlPath = httpRequestController.generateUrlPathForDetail(hashMap);
-//                        JSONObject goodDetail = httpRequestController.parseGoodDetail(urlPath);
-//                    }
-//                    for (Map.Entry<String, Object> entity : hashMap.entrySet()) {
-//                        if (entity.getKey().equals("title_img") || entity.getKey().equals("desc_img")) {
-//                            ArrayList<String> arrayList = new ArrayList<String>();
-//                            JSONArray jsonArray = (JSONArray) entity.getValue();
-//                            for (int i = 0; i < jsonArray.length(); i++){
-//                                arrayList.add(jsonArray.getString(i));
-//                            }
-//                            bundle.putStringArrayList(entity.getKey(), arrayList);
-//                        }
-//                        else {
-//                            bundle.putString(entity.getKey(), entity.getValue().toString());
-//                        }
-//                    }
-//                    bundle.putString("platform", httpRequestController.getPlatform());
-//                    NavHostFragment.findNavController(FirstFragment.this).navigate(R.id.action_FirstFragment_to_SecondFragment, bundle);
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        }).start();
-//    }
-
     public void jumpToPurchasePage(HashMap<String, Object> hashMap) {
         customLoadingDialog = new CustomLoadingDialog(requireContext());
         customLoadingDialog.show();
@@ -594,9 +558,6 @@ public class FirstFragment extends Fragment {
             case "wm":
                 pkgName = "com.xunmng.pindduo";
                 break;
-//            case "ele":
-//                 pkgName = "me.ele";
-//                break;
             case "alipay":
                 pkgName = "com.eg.android.AlipayGphone";
                 break;
@@ -699,7 +660,7 @@ public class FirstFragment extends Fragment {
     }
 
     public void clickActivityChangeColor(int textId) {
-        int[] textIds = {R.id.activity_elem, R.id.activity_tb, R.id.activity_pdd, R.id.activity_jd, R.id.activity_mt, R.id.activity_dc};
+        int[] textIds = {R.id.activity_tb, R.id.activity_pdd, R.id.activity_jd, R.id.activity_mt, R.id.activity_elem, R.id.activity_dc};
         TextView textView;
         for (int i:textIds) {
             textView = requireView().findViewById(i);
@@ -744,6 +705,39 @@ public class FirstFragment extends Fragment {
             binding.wmImg.setImageResource(R.mipmap.wm_g);
         } else {
             binding.wmImg.setImageResource(R.mipmap.wm);
+        }
+    }
+
+    public void showActivityButton() {
+        try {
+            JSONObject localFile = httpRequestController.readFileFromLocal(activityPath);
+            Iterator<String> iterator = localFile.keys();
+            while (iterator.hasNext()) {
+                String key = iterator.next();
+                switch (key) {
+                    case "tb":
+                        binding.activityTb.setVisibility(View.VISIBLE);
+                        break;
+                    case "jd":
+                        binding.activityJd.setVisibility(View.VISIBLE);
+                        break;
+                    case "pdd":
+                        binding.activityPdd.setVisibility(View.VISIBLE);
+                        break;
+                    case "mt":
+                        binding.activityMt.setVisibility(View.VISIBLE);
+                        break;
+                    case "ele":
+                        binding.activityElem.setVisibility(View.VISIBLE);
+                        break;
+                    case "dc":
+                        binding.activityDc.setVisibility(View.VISIBLE);
+                        break;
+                }
+            }
+            localFile = null;
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
