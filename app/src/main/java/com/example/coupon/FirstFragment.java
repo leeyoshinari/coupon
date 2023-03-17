@@ -149,7 +149,7 @@ public class FirstFragment extends Fragment {
                         message.what = 0;
                         message.obj = "检测到有新本版发布，即将跳转到浏览器下载最新版本";
                         handler.sendMessage(message);
-                        Thread.sleep(2000L);
+                        Thread.sleep(1000L);
                         Intent intent = new Intent();
                         intent.setAction("android.intent.action.VIEW");
                         intent.setData(Uri.parse(APP_URL));
