@@ -135,6 +135,15 @@
                                 android:text="@string/jd_text_s"
                                 android:layout_marginStart="20dp"/>
                         <TextView
+                                android:id="@+id/activity_wph"
+                                android:layout_height="wrap_content"
+                                android:layout_width="wrap_content"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:visibility="gone"
+                                android:text="@string/wph_text"
+                                android:layout_marginStart="20dp"/>
+                        <TextView
                                 android:id="@+id/activity_pdd"
                                 android:layout_height="wrap_content"
                                 android:layout_width="wrap_content"
@@ -187,7 +196,7 @@
                 <androidx.appcompat.widget.LinearLayoutCompat
                         android:id="@+id/linear_layout_menu"
                         android:layout_width="wrap_content"
-                        android:layout_height="66dp"
+                        android:layout_height="56dp"
                         android:orientation="horizontal"
                         android:gravity="bottom"
                         app:layout_constraintBottom_toBottomOf="parent">
@@ -202,11 +211,11 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:layout_gravity="center"
-                                        app:cardCornerRadius="18dp">
+                                        app:cardCornerRadius="16dp">
                                         <ImageView
                                                 android:id="@+id/tb_img"
-                                                android:layout_width="36dp"
-                                                android:layout_height="36dp"
+                                                android:layout_width="32dp"
+                                                android:layout_height="32dp"
                                                 android:scaleType="centerCrop"
                                                 android:src="@mipmap/tb_g"/>
                                 </androidx.cardview.widget.CardView>
@@ -216,7 +225,7 @@
                                         android:layout_height="wrap_content"
                                         android:text="@string/tb_text"
                                         android:textStyle="bold"
-                                        android:textSize="12sp"
+                                        android:textSize="11sp"
                                         android:textColor="@color/purple_200"
                                         android:layout_gravity="center"/>
                         </androidx.appcompat.widget.LinearLayoutCompat>
@@ -231,11 +240,11 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:layout_gravity="center"
-                                        app:cardCornerRadius="18dp">
+                                        app:cardCornerRadius="16dp">
                                         <ImageView
                                                 android:id="@+id/jd_img"
-                                                android:layout_width="36dp"
-                                                android:layout_height="36dp"
+                                                android:layout_width="32dp"
+                                                android:layout_height="32dp"
                                                 android:scaleType="centerCrop"
                                                 android:src="@mipmap/jd"/>
                                 </androidx.cardview.widget.CardView>
@@ -245,7 +254,7 @@
                                         android:layout_height="wrap_content"
                                         android:text="@string/jd_text"
                                         android:textStyle="bold"
-                                        android:textSize="12sp"
+                                        android:textSize="11sp"
                                         android:textColor="@color/teal_200"
                                         android:layout_gravity="center"/>
                         </androidx.appcompat.widget.LinearLayoutCompat>
@@ -260,11 +269,11 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:layout_gravity="center"
-                                        app:cardCornerRadius="18dp">
+                                        app:cardCornerRadius="16dp">
                                         <ImageView
                                                 android:id="@+id/pdd_img"
-                                                android:layout_width="36dp"
-                                                android:layout_height="36dp"
+                                                android:layout_width="32dp"
+                                                android:layout_height="32dp"
                                                 android:scaleType="centerCrop"
                                                 android:src="@mipmap/pdd"/>
                                 </androidx.cardview.widget.CardView>
@@ -274,7 +283,36 @@
                                         android:layout_height="wrap_content"
                                         android:text="@string/pdd_text"
                                         android:textStyle="bold"
-                                        android:textSize="12sp"
+                                        android:textSize="11sp"
+                                        android:textColor="@color/teal_200"
+                                        android:layout_gravity="center"/>
+                        </androidx.appcompat.widget.LinearLayoutCompat>
+
+                        <androidx.appcompat.widget.LinearLayoutCompat
+                                android:id="@+id/wph"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:layout_marginStart="50dp">
+                                <androidx.cardview.widget.CardView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_gravity="center"
+                                        app:cardCornerRadius="16dp">
+                                        <ImageView
+                                                android:id="@+id/wph_img"
+                                                android:layout_width="32dp"
+                                                android:layout_height="32dp"
+                                                android:scaleType="centerCrop"
+                                                android:src="@mipmap/wph"/>
+                                </androidx.cardview.widget.CardView>
+                                <TextView
+                                        android:id="@+id/wph_text"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="@string/wph_text"
+                                        android:textStyle="bold"
+                                        android:textSize="11sp"
                                         android:textColor="@color/teal_200"
                                         android:layout_gravity="center"/>
                         </androidx.appcompat.widget.LinearLayoutCompat>
@@ -289,11 +327,11 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:layout_gravity="center"
-                                        app:cardCornerRadius="18dp">
+                                        app:cardCornerRadius="16dp">
                                         <ImageView
                                                 android:id="@+id/wm_img"
-                                                android:layout_width="36dp"
-                                                android:layout_height="36dp"
+                                                android:layout_width="32dp"
+                                                android:layout_height="32dp"
                                                 android:scaleType="centerCrop"
                                                 android:src="@mipmap/wm"/>
                                 </androidx.cardview.widget.CardView>
@@ -303,7 +341,7 @@
                                         android:layout_height="wrap_content"
                                         android:text="@string/wm_text"
                                         android:textStyle="bold"
-                                        android:textSize="12sp"
+                                        android:textSize="11sp"
                                         android:textColor="@color/teal_200"
                                         android:layout_gravity="center"/>
                         </androidx.appcompat.widget.LinearLayoutCompat>

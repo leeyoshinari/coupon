@@ -56,6 +56,20 @@
             "img": "https://img10.360buyimg.com/imagetools/jfs/t1/160315/37/3541/161972/600661f2Eb1a1101f/622b38d650d382a1.jpg"
         }
     ]
+},"wph":
+{
+    "coupon": [
+		{
+            "name": "3折疯抢",
+            "url": "https://t.vip.com/80tEuhYiKhA",
+            "img": "http://ms.vpimg1.com/upload/actpics/cps/0/2023/02/14/62/57wj0r365vqzjkp.jpg"
+        },
+		{
+            "name": "唯品快抢",
+            "url": "https://t.vip.com/afE9NXSC1t6",
+            "img": "http://ms.vpimg1.com/upload/actpics/cps/0/2021/12/29/108/doc6zll13zhz2t7.png"
+        }
+    ]
 },"pdd":
 {
     "coupon": [

@@ -35,6 +35,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.*;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.util.*;
 
@@ -88,6 +89,14 @@ public class FirstFragment extends Fragment {
                 case 10:
                     View objView = (View) msg.obj;
                     objView.setVisibility(View.VISIBLE);
+                    break;
+                case 11:
+                    binding.sortCoupon.setVisibility(View.VISIBLE);
+                    binding.sortVolume.setText("销量");
+                    break;
+                case 12:
+                    binding.sortVolume.setText("折扣");
+                    binding.sortCoupon.setVisibility(View.GONE);
                     break;
             }
         }
@@ -176,7 +185,7 @@ public class FirstFragment extends Fragment {
         param = binding.searchButton.getLayoutParams();
         param.width = (int) (fp.getWidthPixel() * 0.18);
         binding.searchButton.setLayoutParams(param);
-        int marginStartSize = (int) ((fp.getWidthPixel()/fp.getDensity() - 38 * 4) / 5 * fp.getDensity());
+        int marginStartSize = (int) ((fp.getWidthPixel()/fp.getDensity() - 35 * 5) / 6 * fp.getDensity());
         ViewGroup.MarginLayoutParams paramMargin = (ViewGroup.MarginLayoutParams) binding.tb.getLayoutParams();
         paramMargin.setMarginStart(marginStartSize);
         binding.tb.setLayoutParams(paramMargin);
@@ -188,6 +197,10 @@ public class FirstFragment extends Fragment {
         paramMargin = (ViewGroup.MarginLayoutParams) binding.pdd.getLayoutParams();
         paramMargin.setMarginStart(marginStartSize);
         binding.pdd.setLayoutParams(paramMargin);
+
+        paramMargin = (ViewGroup.MarginLayoutParams) binding.wph.getLayoutParams();
+        paramMargin.setMarginStart(marginStartSize);
+        binding.wph.setLayoutParams(paramMargin);
 
         paramMargin = (ViewGroup.MarginLayoutParams) binding.wm.getLayoutParams();
         paramMargin.setMarginStart(marginStartSize);
@@ -233,6 +246,8 @@ public class FirstFragment extends Fragment {
                 }
                 if (httpRequestController.getPlatform().equals("jd")) {
                     fp.setSortType("desc");
+                } else {
+                    fp.setSortType("");
                 }
                 clickSortChangeColor(R.id.sort_all);
                 initData(false);
@@ -253,6 +268,10 @@ public class FirstFragment extends Fragment {
                 if (httpRequestController.getPlatform().equals("pdd")) {
                     fp.setSort("3");
                 }
+                if (httpRequestController.getPlatform().equals("wph")) {
+                    fp.setSort("PRICE");
+                    fp.setSortType("0");
+                }
                 clickSortChangeColor(R.id.sort_price);
                 initData(false);
                 runShowGoodList();
@@ -271,6 +290,10 @@ public class FirstFragment extends Fragment {
                 }
                 if (httpRequestController.getPlatform().equals("pdd")) {
                     fp.setSort("6");
+                }
+                if (httpRequestController.getPlatform().equals("wph")) {
+                    fp.setSort("DISCOUNT");
+                    fp.setSortType("0");
                 }
                 clickSortChangeColor(R.id.sort_volume);
                 initData(false);
@@ -322,6 +345,18 @@ public class FirstFragment extends Fragment {
             public void onClick(View view) {
                 httpRequestController.setPlatform(requireContext().getResources().getResourceEntryName(view.getId()));
                 clickButtonColorImg(R.id.pdd_text, "pdd");
+                handler.sendEmptyMessage(4);
+                handler.sendEmptyMessage(5);
+                initData(true);
+                runShowGoodList();
+            }
+        });
+
+        binding.wph.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                httpRequestController.setPlatform(requireContext().getResources().getResourceEntryName(view.getId()));
+                clickButtonColorImg(R.id.wph_text, "wph");
                 handler.sendEmptyMessage(4);
                 handler.sendEmptyMessage(5);
                 initData(true);
@@ -415,6 +450,11 @@ public class FirstFragment extends Fragment {
             handler.sendEmptyMessage(1);
         } else {
             handler.sendEmptyMessage(2);
+            if (httpRequestController.getPlatform().equals("wph")) {
+                handler.sendEmptyMessage(12);
+            } else {
+                handler.sendEmptyMessage(11);
+            }
         }
         List<HashMap<String, Object>> result = httpRequestController.parseGoodList(keyWord, fp.getSort(), fp.getSortType(), fp.getHasCoupon(), fp.getPageNo(), true);
         if (result.size() > 0) {
@@ -510,7 +550,7 @@ public class FirstFragment extends Fragment {
                         JSONObject result = generatePromotionUrl(hashMap, false);
                         customLoadingDialog.dismiss();
 
-                        if (httpRequestController.getPlatform().equals("jd")) {
+                        if (httpRequestController.getPlatform().equals("jd") || httpRequestController.getPlatform().equals("wph")) {
                             ClipboardManager clipboardManager = (ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
                             ClipData clipData = ClipData.newPlainText(null, result.getString("urlPath"));
                             clipboardManager.setPrimaryClip(clipData);
@@ -574,6 +614,9 @@ public class FirstFragment extends Fragment {
             case "mtwm":
                 pkgName = "com.sankuai.meituan.takeoutnew";
                 break;
+            case "wph":
+                pkgName = "com.achievo.vipshop";
+                break;
             default:
                 pkgName = "default123";
                 break;
@@ -624,6 +667,16 @@ public class FirstFragment extends Fragment {
                     result.put("urlPath", generateResult.getString("data"));
                 }
             }
+            if (httpRequestController.getPlatform().equals("wph")) {
+                queryParam.put("goods_id", hashMap.get("goodsId"));
+                JSONObject generateResult = httpRequestController.generatePromotion(queryParam, isApp);
+                JSONObject urlInfo = generateResult.getJSONObject("data").getJSONArray("urlInfoList").getJSONObject(0);
+                if (isApp) {
+                    result.put("urlPath", urlInfo.getString("deeplinkUrl"));
+                } else {
+                    result.put("urlPath", urlInfo.getString("vipWxUrl"));
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -661,7 +714,7 @@ public class FirstFragment extends Fragment {
     }
 
     public void clickActivityChangeColor(int textId) {
-        int[] textIds = {R.id.activity_tb, R.id.activity_pdd, R.id.activity_jd, R.id.activity_mt, R.id.activity_elem, R.id.activity_dc};
+        int[] textIds = {R.id.activity_tb, R.id.activity_pdd, R.id.activity_jd, R.id.activity_wph, R.id.activity_mt, R.id.activity_elem, R.id.activity_dc};
         TextView textView;
         for (int i:textIds) {
             textView = requireView().findViewById(i);
@@ -674,7 +727,7 @@ public class FirstFragment extends Fragment {
     }
 
     public void clickButtonColorImg(int textId, String name) {
-        int[] textIds = {R.id.tb_text, R.id.jd_text, R.id.pdd_text, R.id.wm_text};
+        int[] textIds = {R.id.tb_text, R.id.jd_text, R.id.pdd_text, R.id.wm_text, R.id.wph_text};
         TextView textView;
         for (int i:textIds) {
             textView = requireView().findViewById(i);
@@ -707,6 +760,12 @@ public class FirstFragment extends Fragment {
         } else {
             binding.wmImg.setImageResource(R.mipmap.wm);
         }
+
+        if ("wph".equals(name)) {
+            binding.wphImg.setImageResource(R.mipmap.wph_g);
+        } else {
+            binding.wphImg.setImageResource(R.mipmap.wph);
+        }
     }
 
     public void showActivityButton() {
@@ -727,6 +786,9 @@ public class FirstFragment extends Fragment {
                         break;
                     case "mt":
                         binding.activityMt.setVisibility(View.VISIBLE);
+                        break;
+                    case "wph":
+                        binding.activityWph.setVisibility(View.VISIBLE);
                         break;
                     case "ele":
                         binding.activityElem.setVisibility(View.VISIBLE);
@@ -845,6 +907,9 @@ public class FirstFragment extends Fragment {
                 }
                 if (fp.getActivityType().equals("pdd")) {
                     urlPath = "pinduoduo://com.xunmeng.pinduoduo" + urlPath;
+                }
+                if (fp.getActivityType().equals("wph")) {
+                    urlPath = "vipshop://showWebview?url=" + URLEncoder.encode(urlPath, "UTF-8");
                 }
                 Intent intent = new Intent();
                 intent.setAction("android.intent.action.VIEW");

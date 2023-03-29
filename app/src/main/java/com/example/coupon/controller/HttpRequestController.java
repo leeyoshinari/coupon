@@ -77,6 +77,9 @@ public class HttpRequestController {
             if (getPlatform().equals("jd")) {
                 return queryGoodsListForJd(searchKey, sort, sortType, hasCoupon, pageNo);
             }
+            if (getPlatform().equals("wph")) {
+                return queryGoodsListForWph(searchKey, sort, sortType, hasCoupon,pageNo);
+            }
             if (getPlatform().equals("pdd")) {
                 params.put("client_id", PDD_CLIENT_ID);
                 params.put("pid", PDD_PID);
@@ -136,6 +139,9 @@ public class HttpRequestController {
                 params.put("offset", (pageNo - 1) * 20);
                 params.put("channel_type", 1);
                 params.put("sign", encryptParams(params, PDD_SECRET));
+            }
+            if (getPlatform().equals("wph")) {
+                return queryRecommendGoodsListForWph(pageNo);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -209,6 +215,9 @@ public class HttpRequestController {
         try {
             if (getPlatform().equals("jd")) {
                 return httpRequestGet(queryGeneratePromotionForJd(queryParam.getString("goods_id")));
+            }
+            if (getPlatform().equals("wph")) {
+                return httpRequestGet(queryGeneratePromotionForWph(queryParam.getString("goods_id")));
             }
             if (getPlatform().equals("pdd")) {
                 params.put("client_id", PDD_CLIENT_ID);
@@ -290,6 +299,9 @@ public class HttpRequestController {
                 if (getPlatform().equals("pdd")) {
                     arrayList = parsePddGoodListOfRecommend(result);
                 }
+                if (getPlatform().equals("wph")) {
+                    arrayList = parseWphGoodList(result);
+                }
             } else {
                 JSONObject result = httpRequestGet(generateUrlPathForList(searchKey, sort, sortType, hasCoupon, pageNo));
                 if (getPlatform().equals("tb")) {
@@ -304,6 +316,9 @@ public class HttpRequestController {
                 }
                 if (getPlatform().equals("pdd")) {
                     arrayList = parsePddGoodList(result);
+                }
+                if (getPlatform().equals("wph")) {
+                    arrayList = parseWphGoodList(result);
                 }
             }
         } catch (Exception e) {
@@ -404,6 +419,41 @@ public class HttpRequestController {
         return urlPath;
     }
 
+    public String queryRecommendGoodsListForWph(int pageNo) {
+        String urlPath = null;
+        try {
+            JSONObject params = new JSONObject();
+            params.put("apikey", "25ee321ae0f7f9be");
+            params.put("pageindex", pageNo);
+            params.put("channelType", 1);
+            params.put("sourceType", 0);
+            urlPath = "https://api-gw.haojingke.com/index.php/v1/api/vip/goodslist?" + convertJsonToUrlParams(params);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return urlPath;
+    }
+
+    public String queryGoodsListForWph(String searchKey, String sort, String sortType, Boolean hasCoupon, int pageNo) {
+        String urlPath = null;
+        try {
+            JSONObject params = new JSONObject();
+            params.put("apikey", "25ee321ae0f7f9be");
+            params.put("pageindex", pageNo);
+            params.put("keyword", searchKey);
+            if (!Objects.equals(sortType, "")) {
+                params.put("order", sortType);
+            }
+            if (!Objects.equals(sort, "")) {
+                params.put("fieldName", sort);
+            }
+            urlPath = "https://api-gw.haojingke.com/index.php/v1/api/vip/goodsquery?" + convertJsonToUrlParams(params);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return urlPath;
+    }
+
     public String queryGeneratePromotionForJd(String skuId) {
         String urlPath = null;
         try {
@@ -414,6 +464,21 @@ public class HttpRequestController {
             params.put("positionid", "3003427429");
             params.put("goods_id", skuId);
             urlPath = "https://api-gw.haojingke.com/index.php/v1/api/jd/getunionurl?" + convertJsonToUrlParams(params);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return urlPath;
+    }
+
+    public String queryGeneratePromotionForWph(String goodsId) {
+        String urlPath = null;
+        try {
+            JSONObject params = new JSONObject();
+            params.put("apikey", "25ee321ae0f7f9be");
+            params.put("goods_id", goodsId);
+            params.put("chanTag", 1);
+            params.put("type", 1);
+            urlPath = "https://api-gw.haojingke.com/index.php/v1/api/vip/getunionurl?" + convertJsonToUrlParams(params);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -477,6 +542,18 @@ public class HttpRequestController {
             goodObj.getJSONObject("goods_search_response");
             JSONArray goodsList = goodObj.getJSONObject("goods_search_response").getJSONArray("goods_list");
             arrayList = getPddGoodList(goodsList);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return arrayList;
+    }
+
+    public List<HashMap<String, Object>> parseWphGoodList(JSONObject goodObj) {
+        List<HashMap<String, Object>> arrayList = new ArrayList<>();
+        try {
+            goodObj.getJSONObject("data");
+            JSONArray goodsList = goodObj.getJSONObject("data").getJSONArray("goodsInfoList");
+            arrayList = getWphGoodList(goodsList);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -656,6 +733,41 @@ public class HttpRequestController {
                     hashMap.put("final_price", convertByBigDecimal(String.format("%.2f", goodsList.getJSONObject(i).getDouble("min_group_price") / 100)));
                     hashMap.put("brokerage", convertByBigDecimal(String.format("%.2f", goodsList.getJSONObject(i).getDouble("promotion_rate") / 1000 * goodsList.getJSONObject(i).getDouble("min_group_price") / 100)));
                 }
+                arrayList.add(hashMap);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return arrayList;
+    }
+
+    public List<HashMap<String, Object>> getWphGoodList(JSONArray goodsList) {
+        List<HashMap<String, Object>> arrayList = new ArrayList<>();
+        try {
+            HashMap<String, Object> hashMap;
+            for (int i = 0; i < goodsList.length(); i++) {
+                hashMap = new HashMap<>();
+                hashMap.put("img", goodsList.getJSONObject(i).getString("goodsThumbUrl"));
+                hashMap.put("title", goodsList.getJSONObject(i).getString("goodsName"));
+                hashMap.put("goodsId", goodsList.getJSONObject(i).getString("goodsId"));
+                if ("ST00000".equals(goodsList.getJSONObject(i).getJSONObject("storeInfo").getString("storeId"))) {
+                    hashMap.put("shop", "唯品自营 - " + goodsList.getJSONObject(i).getString("brandName"));
+                } else {
+                    hashMap.put("shop", goodsList.getJSONObject(i).getJSONObject("storeInfo").getString("storeName"));
+                }
+                int volume = goodsList.getJSONObject(i).getJSONObject("commentsInfo").getInt("comments");
+                String volumeText = String.valueOf(volume);
+                if (volume > 9999) {
+                    volumeText = (int) volume / 10000 + "万";
+                } else if (volume > 999) {
+                    volumeText = (int) volume / 1000 + "千";
+                }
+                hashMap.put("coupon_price", "");
+                hashMap.put("coupon_text", volumeText + "人已购买");
+                hashMap.put("sale_price", goodsList.getJSONObject(i).getString("marketPrice"));
+                hashMap.put("final_price_text", " 券后 ￥");
+                hashMap.put("final_price", goodsList.getJSONObject(i).getString("vipPrice"));
+                hashMap.put("brokerage", goodsList.getJSONObject(i).getString("commission"));
                 arrayList.add(hashMap);
             }
         } catch (Exception e) {

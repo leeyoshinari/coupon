@@ -43,6 +43,7 @@
         <package android:name="com.tencent.mm"/>
         <package android:name="com.sankuai.meituan"/>
         <package android:name="com.sankuai.meituan.takeoutnew"/>
+        <package android:name="com.achievo.vipshop"/>
     </queries>
 
 </manifest>
