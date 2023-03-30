@@ -751,7 +751,7 @@ public class HttpRequestController {
                 hashMap.put("title", goodsList.getJSONObject(i).getString("goodsName"));
                 hashMap.put("goodsId", goodsList.getJSONObject(i).getString("goodsId"));
                 if ("ST00000".equals(goodsList.getJSONObject(i).getJSONObject("storeInfo").getString("storeId"))) {
-                    hashMap.put("shop", "唯品自营 - " + goodsList.getJSONObject(i).getString("brandName"));
+                    hashMap.put("shop", goodsList.getJSONObject(i).getString("brandName") + " - 唯品自营");
                 } else {
                     hashMap.put("shop", goodsList.getJSONObject(i).getJSONObject("storeInfo").getString("storeName"));
                 }
@@ -762,10 +762,15 @@ public class HttpRequestController {
                 } else if (volume > 999) {
                     volumeText = (int) volume / 1000 + "千";
                 }
-                hashMap.put("coupon_price", "");
-                hashMap.put("coupon_text", volumeText + "人已购买");
+                if (goodsList.getJSONObject(i).getString("couponInfo").equals("null")) {
+                    hashMap.put("coupon_price", "");
+                    hashMap.put("coupon_text", volumeText + "人已购买");
+                } else {
+                    hashMap.put("coupon_price", goodsList.getJSONObject(i).getJSONObject("couponInfo").getString("fav"));
+                    hashMap.put("coupon_text", "元券  " + volumeText + "人已购买");
+                }
                 hashMap.put("sale_price", goodsList.getJSONObject(i).getString("marketPrice"));
-                hashMap.put("final_price_text", " 券后 ￥");
+                hashMap.put("final_price_text", " 折后 ￥");
                 hashMap.put("final_price", goodsList.getJSONObject(i).getString("vipPrice"));
                 hashMap.put("brokerage", goodsList.getJSONObject(i).getString("commission"));
                 arrayList.add(hashMap);

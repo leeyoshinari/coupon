@@ -402,6 +402,14 @@ public class FirstFragment extends Fragment {
                 runShowActivity();
             }
         });
+        binding.activityWph.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                fp.setActivityType("wph");
+                clickActivityChangeColor(R.id.activity_wph);
+                runShowActivity();
+            }
+        });
         binding.activityPdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
