@@ -637,8 +637,8 @@ public class HttpRequestController {
                 if (goodsList.getJSONObject(i).has("coupon_amount") && goodsList.getJSONObject(i).getDouble("coupon_amount") > 0) {
                     hashMap.put("coupon_url", goodsList.getJSONObject(i).getString("coupon_share_url"));
                     hashMap.put("coupon_price", goodsList.getJSONObject(i).getString("coupon_amount"));
-                    hashMap.put("coupon_text", "元优惠券   " + volumeText + "人已购买");
-                    hashMap.put("sale_price", goodsList.getJSONObject(i).getString("zk_final_price"));
+                    hashMap.put("coupon_text", "元券   " + volumeText + "人已购买");
+                    hashMap.put("sale_price", convertByBigDecimal(goodsList.getJSONObject(i).getString("zk_final_price")));
                     hashMap.put("final_price_text", " 券后 ￥");
                     double finalPrice = goodsList.getJSONObject(i).getDouble("zk_final_price") - goodsList.getJSONObject(i).getDouble("coupon_amount");
                     hashMap.put("final_price", convertByBigDecimal(String.format("%.2f", finalPrice)));
@@ -686,7 +686,7 @@ public class HttpRequestController {
                 if (goodsList.getJSONObject(i).has("couponInfo") && goodsList.getJSONObject(i).getJSONObject("couponInfo").getJSONArray("couponList").length() > 0 &&
                         goodsList.getJSONObject(i).getJSONObject("couponInfo").getJSONArray("couponList").getJSONObject(0).getDouble("quota") <= goodsList.getJSONObject(i).getJSONObject("priceInfo").getDouble("price")) {
                     hashMap.put("coupon_price", convertByBigDecimal(String.format("%.2f", goodsList.getJSONObject(i).getJSONObject("couponInfo").getJSONArray("couponList").getJSONObject(0).getDouble("discount"))));
-                    hashMap.put("coupon_text", "元优惠券   " + volumeText + "人已购买");
+                    hashMap.put("coupon_text", "元券   " + volumeText + "人已购买");
                     hashMap.put("sale_price", convertByBigDecimal(String.valueOf(goodsList.getJSONObject(i).getJSONObject("priceInfo").getDouble("price"))));
                     hashMap.put("final_price_text", " 券后 ￥");
                     hashMap.put("final_price", convertByBigDecimal(String.format("%.2f", (goodsList.getJSONObject(i).getJSONObject("priceInfo").getDouble("price") - goodsList.getJSONObject(i).getJSONObject("couponInfo").getJSONArray("couponList").getJSONObject(0).getDouble("discount")))));
@@ -719,7 +719,7 @@ public class HttpRequestController {
                 hashMap.put("search_id", goodsList.getJSONObject(i).getString("search_id"));
                 if (goodsList.getJSONObject(i).has("coupon_discount") && goodsList.getJSONObject(i).getInt("coupon_discount") > 0) {
                     hashMap.put("coupon_price", convertByBigDecimal(String.format("%.2f", goodsList.getJSONObject(i).getDouble("coupon_discount") / 100)));
-                    hashMap.put("coupon_text", "元优惠券   " + goodsList.getJSONObject(i).getString("sales_tip") + "人已购买");
+                    hashMap.put("coupon_text", "元券   " + goodsList.getJSONObject(i).getString("sales_tip") + "人已购买");
                     hashMap.put("sale_price", convertByBigDecimal(String.format("%.2f", goodsList.getJSONObject(i).getDouble("min_group_price") / 100)));
                     hashMap.put("final_price_text", " 券后 ￥");
                     double finalPrice = (goodsList.getJSONObject(i).getDouble("min_group_price") - goodsList.getJSONObject(i).getDouble("coupon_discount")) / 100;
@@ -741,6 +741,7 @@ public class HttpRequestController {
         return arrayList;
     }
 
+    @SuppressLint("DefaultLocale")
     public List<HashMap<String, Object>> getWphGoodList(JSONArray goodsList) {
         List<HashMap<String, Object>> arrayList = new ArrayList<>();
         try {
@@ -765,14 +766,15 @@ public class HttpRequestController {
                 if (goodsList.getJSONObject(i).getString("couponInfo").equals("null")) {
                     hashMap.put("coupon_price", "");
                     hashMap.put("coupon_text", volumeText + "人已购买");
+                    hashMap.put("final_price", convertByBigDecimal(goodsList.getJSONObject(i).getString("vipPrice")));
                 } else {
-                    hashMap.put("coupon_price", goodsList.getJSONObject(i).getJSONObject("couponInfo").getString("fav"));
+                    hashMap.put("coupon_price", convertByBigDecimal(goodsList.getJSONObject(i).getJSONObject("couponInfo").getString("fav")));
                     hashMap.put("coupon_text", "元券  " + volumeText + "人已购买");
+                    hashMap.put("final_price", convertByBigDecimal(String.format("%.2f", goodsList.getJSONObject(i).getDouble("vipPrice") - goodsList.getJSONObject(i).getJSONObject("couponInfo").getDouble("fav"))));
                 }
-                hashMap.put("sale_price", goodsList.getJSONObject(i).getString("marketPrice"));
+                hashMap.put("sale_price", convertByBigDecimal(goodsList.getJSONObject(i).getString("marketPrice")));
                 hashMap.put("final_price_text", " 折后 ￥");
-                hashMap.put("final_price", goodsList.getJSONObject(i).getString("vipPrice"));
-                hashMap.put("brokerage", goodsList.getJSONObject(i).getString("commission"));
+                hashMap.put("brokerage", convertByBigDecimal(goodsList.getJSONObject(i).getString("commission")));
                 arrayList.add(hashMap);
             }
         } catch (Exception e) {
