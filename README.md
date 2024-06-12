@@ -1,11 +1,13 @@
-# coupon ![](https://visitor-badge.glitch.me/badge?page_id=leeyoshinari)
+# 由于淘宝 API 接口升级，获取淘宝商品优惠链接无法使用，需要修改；由于京东 API 接口权限升级导致无法活动京东推荐商品链接，需要修改。本人 Android 开发环境已删除，本项目停止维护了。
+## 可使用网页版的工具，[请点我查看](https://github.com/leeyoshinari/shopping)
+
+# coupon
 淘客个人领券App，支持淘宝、京东、唯品会、拼多多、美团。
 
 页面很简洁，仅支持个人使用。代码仅供参考
 
 App下载地址：<br>
-[下载地址1](http://101.200.52.208/local/优惠券.apk)<br>
-[下载地址2](https://raw.githubusercontent.com/leeyoshinari/coupon/main/app/version/优惠券.apk)
+[下载地址](https://raw.githubusercontent.com/leeyoshinari/coupon/main/app/version/优惠券.apk)
 
 
 ## 使用方法
@@ -21,5 +23,5 @@ App下载地址：<br>
 在该app上点击需要购买的商品，如果手机没用安装对应平台的app，则会自动复制商品的小程序购买链接，然后去微信打开小程序（[coupon_minapp](https://github.com/leeyoshinari/coupon_minapp)），粘贴刚刚自动复制的链接去购买即可。
 
 ### 开发
-代码比较简单，也写的比较乱，有些设置项写在代码里，适合有一点点debug能力的朋友使用
+代码比较简单，也写的比较乱，有些设置项写在代码里，适合有一点点debug能力的小伙伴使用
 
